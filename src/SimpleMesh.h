@@ -224,10 +224,17 @@ public:
 
 
 		//Create adjacency matrix
+<<<<<<< HEAD
+		m_neighborMatrix = MatrixXf::Zero(m_numV, m_numV);
+		m_verticesToFaces = std::vector<std::vector<unsigned int>>(m_numV); //vtf[i] contains faces that contain vertex ID i
+        m_cellRotations = std::vector<MatrixXf>(m_numV); // list of Rs per fan
+		m_edgeMatrix = MatrixXf::Zero(m_numV,m_numV);
+=======
 		m_neighborMatrix = MatrixXf::Zero(numP, numP);
 		m_verticesToFaces = std::vector<std::vector<unsigned int>>(numP);
         m_cellRotations = std::vector<MatrixXf>(numV); // list of Rs per fan
 		m_edgeMatrix = MatrixXf::Zero(numV,numV);
+>>>>>>> master
 
 		// Read faces (i.e. triangles).
 		for (unsigned int i = 0; i < numP; i++) {
@@ -256,6 +263,17 @@ public:
 		cout << "numFaces: "<<numP<<endl;
 		cout << "numEdges: "<<numE<<endl;
 
+<<<<<<< HEAD
+		cout << m_edgeMatrix.rows() << " - " << m_edgeMatrix.cols()<< endl;
+		cout << m_neighborMatrix.rows() << " - " << m_neighborMatrix.cols()<< endl;
+
+		// m_laplaceMatrix = m_edgeMatrix - m_neighborMatrix; // TODO necessary?
+
+		//buildWeightMatrix();
+		// computeDistances();
+
+=======
+>>>>>>> master
 		return true;
 	}
 
@@ -271,7 +289,11 @@ public:
 	bool partOfFace(int i, int j, Triangle f){
 		return (f.idx0 ==i && (f.idx1==j || f.idx2==j)) ||
 				(f.idx1 ==i && (f.idx0==j || f.idx2==j)) ||
+<<<<<<< HEAD
+				(f.idx2 ==i && (f.idx1==j || f.idx0==j)) ;
+=======
 				(f.idx2 ==i && (f.idx1==j || f.idx0==j)) 
+>>>>>>> master
 
 	}
 
@@ -298,7 +320,10 @@ public:
 	}
 
 	void buildWeightMatrix(){
+<<<<<<< HEAD
+=======
 		//TODO, https://github.com/TanaTanoi/as-rigid-as-possible-deformation/blob/master/arap.py#L100 line 139
+>>>>>>> master
 		cout<<"Generating Weight Matrix"<<endl;
         m_weightMatrix = MatrixXf(m_numV, m_numV);
 		m_weightSum = MatrixXf(m_numV, m_numV);
@@ -308,8 +333,12 @@ public:
             for (int neighbor_id : neighbors)
                 assignWeightForPair(vertex_id, neighbor_id);
 		}
+<<<<<<< HEAD
+
+=======
             
         cout<< m_weightMatrix<<endl;
+>>>>>>> master
 	}
 
 	void assignWeightForPair(int i, int j){
@@ -317,14 +346,25 @@ public:
         if(m_weightMatrix(j, i) == 0) //If the opposite weight has not been computed, do so
             weightIJ = computeWeightForPair(i, j);
         else
+<<<<<<< HEAD
+            weightIJ = m_weightMatrix(j, i);
+=======
             weightIJ = m_weightMatrix.at(j, i);
+>>>>>>> master
         m_weightSum(i, i) += (weightIJ * 0.5);
         m_weightSum(j, j) += (weightIJ * 0.5);
         m_weightMatrix(i, j) = weightIJ;
 	}
 
+<<<<<<< HEAD
+	double angleBetweenVectors(Vector4f a, Vector4f b) {
+		Vector3f a3(a.x(), a.y(), a.z());
+		Vector3f b3(b.x(), b.y(), b.z());
+		return std::atan2(a3.cross(b3).norm(), a3.dot(b3));
+=======
 	double angleBetweenVectors(Eigen::Vector3d a, Eigen::Vector3d b) {
 		return std::atan2(a.cross(b).norm(), a.dot(b));
+>>>>>>> master
 	}
 
     float computeWeightForPair(int i, int j){
@@ -348,13 +388,65 @@ public:
         for (Triangle f : localFaces){
 			int other_vertex_id = getThirdFacePoint(i, j, f);
             Vertex vertex_o = m_vertices[other_vertex_id];
+<<<<<<< HEAD
+            float theta = angleBetweenVectors(vertex_i.position - vertex_o.position, vertex_j.position - vertex_o.position);
+=======
             float theta = angleBetweenVectors(vertex_i - vertex_o, vertex_j - vertex_o);
+>>>>>>> master
             cot_theta_sum += (1 / tan(theta));
 		}
             
         return cot_theta_sum * 0.5;
 	}
 
+<<<<<<< HEAD
+	void calculateLaplaceMatrix(){ // TODO so far this makes additional constraints for each fixed vertex, do we need this if we use ceres?
+        
+        m_laplaceMatrix = m_weightSum - m_weightMatrix;
+        int num_fixedVertices = m_fixedVertices.size();
+
+        int n = m_numV + num_fixedVertices; //for each fixed vertice, add a new row and col
+        MatrixXf m = MatrixXf::Zero(n,n); 
+        
+		for(int i=0;i<m_numV;i++){ // Eigen::block() not with non constant vars
+			for(int j=0;j<m_numV;j++){
+				m(i,j) = m_laplaceMatrix(i,j);
+			}
+		}
+        
+		// Add 1s in the row and column associated with the fixed point to constain it
+        // This will increase L by the size of fixed_verts
+        for (int i =0; i< num_fixedVertices; ++i){
+			m(m_numV +i, m_fixedVertices[i]) = 1;
+			m( m_fixedVertices[i], m_numV +i) = 1;
+		}
+
+        m_laplaceMatrix = m;
+	}
+
+	void computeDistances(){ //error in here
+		m_distances.clear();
+        for (int i=0; i< m_numV; i++){
+            Vertex v_i = m_vertices[i];
+            vector<int> neighbors = getNeighborsOf(i);
+            int numNeighbors = neighbors.size();
+
+            vector<Vector4f> distance_i(numNeighbors);
+
+            for (int j=0; j< numNeighbors; j++){
+                int nId = neighbors[j];
+
+                Vertex v_j = m_vertices[nId];
+                distance_i[j] = Vector4f(v_i.position - v_j.position);
+			}
+        m_distances.push_back(distance_i);
+		}
+	}
+
+        
+
+=======
+>>>>>>> master
 	bool writeMesh(const std::string& filename) {
 		// Write off file.
 		std::ofstream outFile(filename);
@@ -533,6 +625,19 @@ public:
 	}
 
 private:
+<<<<<<< HEAD
+	vector<Vertex> m_vertices;
+	vector<int> m_fixedVertices;
+	vector<Vertex> m_verticesPrime;
+	vector<Triangle> m_triangles;
+	MatrixXf m_neighborMatrix;
+	vector<MatrixXf> m_cellRotations;
+	MatrixXf m_edgeMatrix;
+	MatrixXf m_laplaceMatrix;
+	vector<std::vector<unsigned int>> m_verticesToFaces;
+	MatrixXf m_weightMatrix, m_weightSum;
+	vector<vector<Vector4f>> m_distances;
+=======
 	std::vector<Vertex> m_vertices;
 	std::vector<Vertex> m_verticesPrime;
 	std::vector<Triangle> m_triangles;
@@ -541,6 +646,7 @@ private:
 	MatrixXf m_edgeMatrix;
 	std::vector<std::vector<unsigned int>> m_verticesToFaces;
 	MatrixXf m_weightMatrix, m_weightSum;
+>>>>>>> master
 	int m_numV;
 
 	/**
