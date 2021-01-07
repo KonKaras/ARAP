@@ -8,9 +8,7 @@
 #include "ICPOptimizer.h"
 #include "ARAPOptimizer.h"
 #include "PointCloud.h"
-
-#include <igl/readOFF.h>
-#include <igl/opengl/glfw/Viewer.h>
+#include "GUI.h"
 
 using namespace std;
 
@@ -34,17 +32,8 @@ int main() {
 
 	std::cout << "ARAP done." << std::endl;
 
-	//load mesh
-	Eigen::MatrixXd vertices;
-	Eigen::MatrixXi faces;
-	
-	igl::readOFF(filenameMesh, vertices, faces);
-	
-	//display mesh
-
-	igl::opengl::glfw::Viewer viewer;
-	viewer.data().set_mesh(vertices, faces);
-	viewer.launch();
+	GUI* gui = new GUI();
+	gui->display(filenameMesh);
 	
 	// delete optimizer;
 

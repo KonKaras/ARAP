@@ -60,6 +60,7 @@ set(HEADER_FILES
     ICPOptimizer.h 
     ARAPOptimizer.h 
     FreeImageHelper.h
+    GUI.h
 )
 set(SOURCE_FILES 
     FreeImageHelper.cpp
