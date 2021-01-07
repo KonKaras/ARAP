@@ -10,8 +10,6 @@
 using namespace std;
 
 
-<<<<<<< HEAD
-
 int main() {
 	// Load the source and target mesh.
 	const std::string filenameMesh = std::string("/home/nnrthmr/Code/MotionCaptring&3dScanning_WS20/FinalProject/arap/data/bunny/bunny.off");
@@ -24,11 +22,6 @@ int main() {
 
 	Vector3f handle(-0.0106867f, 0.179756f, -0.0283248f); // left ear
 
-=======
-int main() {
-	// Load the source and target mesh.
-	const std::string filenameMesh = std::string("/home/nnrthmr/Code/MotionCaptring&3dScanning_WS20/FinalProject/arap/data/bunny/bunny_part1.off");
->>>>>>> master
 
 	SimpleMesh sourceMesh;
 	if (!sourceMesh.loadMesh(filenameMesh)) {
@@ -46,13 +39,11 @@ int main() {
 
 	// delete optimizer;
 
-<<<<<<< HEAD
+
 	// 1. Mesh load() : does all initializing and computes weight matrix and laplacian
 	// 2. update laplacian if fixed points changed
 	// 3. 
 
-=======
->>>>>>> master
 	/*
 	d = Deformer(filename)
 	d.read_file()
