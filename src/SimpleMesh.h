@@ -6,7 +6,7 @@
 #include "Eigen.h"
 using namespace std;
 
-struct Vertex {
+struct Vertex { // TODO Do we need homogeneous coordinates or is 3d enough?
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
 	// Position stored as 4 floats (4th component is supposed to be 1.0)
@@ -160,7 +160,7 @@ public:
 		}
 	}
 
-	bool loadMesh(const std::string& filename) {
+	bool loadMesh(const std::string& filename, vector<Vector4f> fixedPoints) {
 		// Read off file (Important: Only .off files are supported).
 		m_vertices.clear();
 		m_verticesPrime.clear();
@@ -195,6 +195,14 @@ public:
 				Vertex v;
 				file >> v.position.x() >> v.position.y() >> v.position.z();
 				v.position.w() = 1.f;
+
+				for(Vector4f f : fixedPoints){
+					if(f==v.position){
+						cout << " fixed point found: "<<i<<endl;
+					m_fixedVertices.push_back(i);
+					}
+				}
+
 				// Colors are stored as integers. We need to convert them.
 				Vector4i colorInt;
 				file >> colorInt.x() >> colorInt.y() >> colorInt.z() >> colorInt.w();
@@ -209,6 +217,14 @@ public:
 				Vertex v;
 				file >> v.position.x() >> v.position.y() >> v.position.z();
 				v.position.w() = 1.f;
+
+				for(Vector4f f : fixedPoints){
+					if(f==v.position){
+						cout << " fixed point found: "<<i<<endl;
+					m_fixedVertices.push_back(i);
+					}
+				}
+
 				v.color.x() = 0;
 				v.color.y() = 0;
 				v.color.z() = 0;
@@ -256,13 +272,13 @@ public:
 		cout << "numFaces: "<<numP<<endl;
 		cout << "numEdges: "<<numE<<endl;
 
-		cout << m_edgeMatrix.rows() << " - " << m_edgeMatrix.cols()<< endl;
-		cout << m_neighborMatrix.rows() << " - " << m_neighborMatrix.cols()<< endl;
+		// cout << m_edgeMatrix.rows() << " - " << m_edgeMatrix.cols()<< endl;
+		// cout << m_neighborMatrix.rows() << " - " << m_neighborMatrix.cols()<< endl;
 
-		// m_laplaceMatrix = m_edgeMatrix - m_neighborMatrix; // TODO necessary?
+		m_laplaceMatrix = m_edgeMatrix - m_neighborMatrix; // TODO necessary?
 
-		//buildWeightMatrix();
-		// computeDistances();
+		buildWeightMatrix();
+		computeDistances();
 
 
 		return true;
@@ -290,6 +306,14 @@ public:
 				neighbors.push_back(i);
 		}
         return neighbors;
+	}
+
+	Vector3f getVertex(int i){
+		return Vector3f(m_vertices[i].position.x(),m_vertices[i].position.y(),m_vertices[i].position.z());
+	}
+
+		Vector3f getDeformedVertex(int i){
+		return Vector3f(m_verticesPrime[i].position.x(),m_verticesPrime[i].position.y(),m_verticesPrime[i].position.z());
 	}
 
 	int getThirdFacePoint(int i, int j, Triangle f){
@@ -601,6 +625,7 @@ private:
 	MatrixXf m_weightMatrix, m_weightSum;
 	vector<vector<Vector4f>> m_distances;
 	int m_numV;
+
 
 	/**
 	 * Returns a rotation that transforms vector vA into vector vB.
