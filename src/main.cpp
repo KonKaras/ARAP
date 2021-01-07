@@ -7,18 +7,23 @@
 #include "ICPOptimizer.h"
 #include "ARAPOptimizer.h"
 #include "PointCloud.h"
+
+#include <igl/readOFF.h>
+#include <igl/opengl/glfw/Viewer.h>
+
 using namespace std;
 
 
 int main() {
 	// Load the source and target mesh.
-	const std::string filenameMesh = std::string("/home/nnrthmr/Code/MotionCaptring&3dScanning_WS20/FinalProject/arap/data/bunny/bunny_part1.off");
+	const std::string filenameMesh = std::string("../data/bunny/bunny.off");//"/home/nnrthmr/Code/MotionCaptring&3dScanning_WS20/FinalProject/arap/data/bunny/bunny_part1.off");
 
 	SimpleMesh sourceMesh;
 	if (!sourceMesh.loadMesh(filenameMesh)) {
 		std::cout << "Mesh file wasn't read successfully at location: " << filenameMesh << std::endl;
 		return -1;
 	}
+
 
 	// ARAPOptimizer *optimizer = new ARAPOptimizer();
 	// optimizer->setNumIterations(10);
@@ -27,6 +32,16 @@ int main() {
 	// Matrix4f estimatedPose = optimizer->deform();
 
 	std::cout << "ARAP done." << std::endl;
+
+	//load mesh
+	Eigen::MatrixXd vertices;
+	Eigen::MatrixXi faces;
+	igl::readOFF(filenameMesh, vertices, faces);
+
+	//display mesh
+	igl::opengl::glfw::Viewer viewer;
+	viewer.data().set_mesh(vertices, faces);
+	viewer.launch();
 
 	// delete optimizer;
 

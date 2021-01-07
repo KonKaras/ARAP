@@ -269,9 +269,9 @@ public:
 	}
 
 	bool partOfFace(int i, int j, Triangle f){
-		return (f.idx0 ==i && (f.idx1==j || f.idx2==j)) ||
-				(f.idx1 ==i && (f.idx0==j || f.idx2==j)) ||
-				(f.idx2 ==i && (f.idx1==j || f.idx0==j)) 
+		return (f.idx0 == i && (f.idx1 == j || f.idx2 == j)) ||
+			(f.idx1 == i && (f.idx0 == j || f.idx2 == j)) ||
+			(f.idx2 == i && (f.idx1 == j || f.idx0 == j));
 
 	}
 
@@ -317,7 +317,7 @@ public:
         if(m_weightMatrix(j, i) == 0) //If the opposite weight has not been computed, do so
             weightIJ = computeWeightForPair(i, j);
         else
-            weightIJ = m_weightMatrix.at(j, i);
+            //weightIJ = m_weightMatrix.at(j, i);
         m_weightSum(i, i) += (weightIJ * 0.5);
         m_weightSum(j, j) += (weightIJ * 0.5);
         m_weightMatrix(i, j) = weightIJ;
@@ -348,8 +348,8 @@ public:
         for (Triangle f : localFaces){
 			int other_vertex_id = getThirdFacePoint(i, j, f);
             Vertex vertex_o = m_vertices[other_vertex_id];
-            float theta = angleBetweenVectors(vertex_i - vertex_o, vertex_j - vertex_o);
-            cot_theta_sum += (1 / tan(theta));
+            //float theta = angleBetweenVectors(vertex_i - vertex_o, vertex_j - vertex_o);
+            //cot_theta_sum += (1 / tan(theta));
 		}
             
         return cot_theta_sum * 0.5;
