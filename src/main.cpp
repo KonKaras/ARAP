@@ -1,3 +1,4 @@
+#include <Windows.h>
 #include <iostream>
 #include <fstream>
 
@@ -36,13 +37,15 @@ int main() {
 	//load mesh
 	Eigen::MatrixXd vertices;
 	Eigen::MatrixXi faces;
+	
 	igl::readOFF(filenameMesh, vertices, faces);
-
+	
 	//display mesh
+
 	igl::opengl::glfw::Viewer viewer;
 	viewer.data().set_mesh(vertices, faces);
 	viewer.launch();
-
+	
 	// delete optimizer;
 
 	/*

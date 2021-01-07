@@ -63,6 +63,7 @@ set(HEADER_FILES
 )
 set(SOURCE_FILES 
     FreeImageHelper.cpp
+    glad.c
 )
 
 link_directories(${FreeImage_LIBRARY_DIR} ${GLFW_LIBRARY_DIR} ${GLEW_LIBRARY_DIR})
