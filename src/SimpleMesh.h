@@ -160,7 +160,7 @@ public:
 		}
 	}
 
-	bool loadMesh(const std::string& filename, vector<Vector4f> fixedPoints) {
+	bool loadMesh(const std::string& filename, vector<int> fixedPoints, int handle) {
 		// Read off file (Important: Only .off files are supported).
 		m_vertices.clear();
 		m_verticesPrime.clear();
@@ -188,6 +188,14 @@ public:
 
 		m_numV = numV;
 
+		for(int f : fixedPoints){
+			m_fixedVertices.push_back(f);
+		}
+
+		m_fixedVertices.push_back(handle);
+
+		cout << m_fixedVertices.size() << " in m_fixedVertices" <<endl;
+
 		// Read vertices.
 		if (std::string(string1).compare("COFF") == 0) {
 			// We have color information.
@@ -195,13 +203,6 @@ public:
 				Vertex v;
 				file >> v.position.x() >> v.position.y() >> v.position.z();
 				v.position.w() = 1.f;
-
-				for(Vector4f f : fixedPoints){
-					if(f==v.position){
-						cout << " fixed point found: "<<i<<endl;
-					m_fixedVertices.push_back(i);
-					}
-				}
 
 				// Colors are stored as integers. We need to convert them.
 				Vector4i colorInt;
@@ -217,13 +218,6 @@ public:
 				Vertex v;
 				file >> v.position.x() >> v.position.y() >> v.position.z();
 				v.position.w() = 1.f;
-
-				for(Vector4f f : fixedPoints){
-					if(f==v.position){
-						cout << " fixed point found: "<<i<<endl;
-					m_fixedVertices.push_back(i);
-					}
-				}
 
 				v.color.x() = 0;
 				v.color.y() = 0;
@@ -275,11 +269,9 @@ public:
 		// cout << m_edgeMatrix.rows() << " - " << m_edgeMatrix.cols()<< endl;
 		// cout << m_neighborMatrix.rows() << " - " << m_neighborMatrix.cols()<< endl;
 
-		m_laplaceMatrix = m_edgeMatrix - m_neighborMatrix; // TODO necessary?
-
 		buildWeightMatrix();
 		computeDistances();
-
+		calculateLaplaceMatrix();
 
 		return true;
 	}
@@ -312,8 +304,43 @@ public:
 		return Vector3f(m_vertices[i].position.x(),m_vertices[i].position.y(),m_vertices[i].position.z());
 	}
 
-		Vector3f getDeformedVertex(int i){
+	Vector3f getDeformedVertex(int i){
 		return Vector3f(m_verticesPrime[i].position.x(),m_verticesPrime[i].position.y(),m_verticesPrime[i].position.z());
+	}
+
+	float getWeight(int i, int j){
+		return m_weightMatrix(i,j);
+	}
+
+	int getNumberOfVertices(){
+		return m_numV;
+	}
+
+	int getNumberOfFixedVertices(){
+		return m_fixedVertices.size();
+	}
+
+	MatrixXf getRotation(int i){
+		return m_cellRotations[i];
+	}
+
+	void setRotation(int i, MatrixXf r){
+		m_cellRotations[i] = r;
+	}
+
+	void setPPrime(MatrixXf pprime){
+		for(int i=0; i< m_numV; i++){
+			Vertex v;
+			v.position.x() = pprime(i,0);
+			v.position.y() = pprime(i,1);
+			v.position.z() = pprime(i,2);
+			m_verticesPrime[i] = v;
+		}
+		
+	}
+
+	MatrixXf getLaplaceMatrix(){
+		return m_laplaceMatrix;
 	}
 
 	int getThirdFacePoint(int i, int j, Triangle f){
@@ -348,7 +375,6 @@ public:
         if(m_weightMatrix(j, i) == 0) //If the opposite weight has not been computed, do so
             weightIJ = computeWeightForPair(i, j);
         else
-
             weightIJ = m_weightMatrix(j, i);
 
         m_weightSum(i, i) += (weightIJ * 0.5);
@@ -391,9 +417,11 @@ public:
         return cot_theta_sum * 0.5;
 	}
 
-	void calculateLaplaceMatrix(){ // TODO so far this makes additional constraints for each fixed vertex, do we need this if we use ceres?
+	void calculateLaplaceMatrix(){ // TODO not sure if correct
         
         m_laplaceMatrix = m_weightSum - m_weightMatrix;
+		int r = m_laplaceMatrix.rows();
+		int c = m_laplaceMatrix.cols();
         int num_fixedVertices = m_fixedVertices.size();
 
         int n = m_numV + num_fixedVertices; //for each fixed vertice, add a new row and col
@@ -405,7 +433,7 @@ public:
 			}
 		}
         
-		// Add 1s in the row and column associated with the fixed point to constain it
+		// Add 1s in the row and column associated with the fixed point to constain it -> adding constraint per fixed point to LES
         // This will increase L by the size of fixed_verts
         for (int i =0; i< num_fixedVertices; ++i){
 			m(m_numV +i, m_fixedVertices[i]) = 1;
@@ -415,7 +443,7 @@ public:
         m_laplaceMatrix = m;
 	}
 
-	void computeDistances(){ //error in here
+	void computeDistances(){
 		m_distances.clear();
         for (int i=0; i< m_numV; i++){
             Vertex v_i = m_vertices[i];
@@ -434,19 +462,19 @@ public:
 		}
 	}
 
-        
-	bool writeMesh(const std::string& filename) {
+    // Writes deformed mesh to file
+	bool writeMesh(const std::string& filename) { 
 		// Write off file.
 		std::ofstream outFile(filename);
 		if (!outFile.is_open()) return false;
 
 		// Write header.
 		outFile << "COFF" << std::endl;
-		outFile << m_vertices.size() << " " << m_triangles.size() << " 0" << std::endl;
+		outFile << m_verticesPrime.size() << " " << m_triangles.size() << " 0" << std::endl;
 
 		// Save vertices.
-		for (unsigned int i = 0; i < m_vertices.size(); i++) {
-			const auto& vertex = m_vertices[i];
+		for (unsigned int i = 0; i < m_verticesPrime.size(); i++) {
+			const auto& vertex = m_verticesPrime[i];
 			if (vertex.position.allFinite())
 				outFile << vertex.position.x() << " " << vertex.position.y() << " " << vertex.position.z() << " "
 				<< int(vertex.color.x()) << " " << int(vertex.color.y()) << " " << int(vertex.color.z()) << " " << int(vertex.color.w()) << std::endl;

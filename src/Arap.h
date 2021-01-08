@@ -5,10 +5,8 @@
 #include "SimpleMesh.h"
 using namespace std;
 
-Matrix3f estimateRotation(SimpleMesh mesh, int vertexID) {
-		// TODO: Estimate the rotation from source to target points, following the Procrustes algorithm.
-		// To compute the singular value decomposition you can use JacobiSVD() from Eigen.
-		// Important: The covariance matrices should contain mean-centered source/target points.
+void estimateRotation(SimpleMesh mesh, int vertexID) {
+		// Assume vertices are fix, solve for rotations
 
         // Sorkine paper: PDP' for vertex i with neighbors j (P contains edges of fan as cols, P' edges of deformed fan, D diagonal with weights w_ij)
 		Matrix3f rotation = Matrix3f::Identity();
@@ -25,41 +23,79 @@ Matrix3f estimateRotation(SimpleMesh mesh, int vertexID) {
 			PPrime.col(j) = mesh.getDeformedVertex(vertexID) - mesh.getDeformedVertex(j);
             D(j,j) = mesh.getWeight(vertexID, j);
 		} 
-
 		JacobiSVD<MatrixXf> svd(P * D * PPrime.transpose(), ComputeFullU | ComputeFullV);
 		rotation = svd.matrixV() * svd.matrixU().transpose();
 
 		if(rotation.determinant() == -1)
 		{
-			Eigen::Matrix3f tmp;
-			rotation = svd.matrixV() * Matrix3f::Identity() * Vector3f(1,1,-1) * svd.matrixU().transpose();
+            MatrixXf svd_u = svd.matrixU();
+            svd_u.rightCols(1) = svd_u.rightCols(1) * -1;
+			//rotation = svd.matrixV() * Matrix3f::Identity() * Vector3f(1,1,-1) * svd.matrixU().transpose();
+			rotation = svd.matrixV() * svd_u.transpose();
 		}
 
-		return rotation;
-	}
+		mesh.setRotation(vertexID, rotation);
+}
 
-    void applyDeformation(SimpleMesh mesh, int iterations){
-        float energy=0.0f;
-        cout<<"Applying deformation"<<endl;
-        while(iterations>0){
-             // initialize b and assign constraints
-            //number_of_fixed_verts = len(self.fixed_verts)
-
-            //self.b_array = np.zeros((self.n + number_of_fixed_verts, 3))
-            // Constraint b points
-            //for i in range(number_of_fixed_verts):
-            //  self.b_array[self.n + i] = self.fixed_verts[i][1]
-
-        
-            estimateRotation();
-            applyRotation(); // estimateVertices()?
-            float energy_i = calculateEnergy();
-            cout<< "Iterations left: "<< iteration<< "  Local error: "<< energy_i << endl;
-
-            //  if(self.energy_minimized(iteration_energy)):
-            //      print("Energy was minimized at iteration", t, " with an energy of ", iteration_energy)
-            //      break
-            energy = energy_i;
-            iteration--;
-        }
+Vector3f calculateB(SimpleMesh mesh, int i){
+    vector<int> neighbors = mesh.getNeighborsOf(i);
+    int numNeighbors = neighbors.size();
+    Vector3f b = Vector3f::Zero();
+    for ( int j = 0; j< numNeighbors; ++j)
+    {
+        b += mesh.getWeight(i, j) * 0.5 * (mesh.getRotation(i)+ mesh.getRotation(j))*(mesh.getVertex(i) - mesh.getVertex(j));
     }
+    return b;
+}
+
+void estimateVertices(SimpleMesh mesh){
+    MatrixXf b(mesh.getNumberOfVertices()+ mesh.getNumberOfFixedVertices(), 3);
+    for ( int i = 0; i< mesh.getNumberOfVertices(); ++i)
+    {
+        b.row(i) = calculateB(mesh, i);
+    }
+    for(int i=0; i< mesh.getNumberOfFixedVertices(); ++i){
+        b.row(mesh.getNumberOfVertices()+i) = mesh.getVertex(i);
+    }
+
+    //Solve LES with Cholesky, L positive definite // TODO test sparse cholesky on sparse eigen matrices
+    MatrixXf PPrime = mesh.getLaplaceMatrix().llt().solve(b);
+    mesh.setPPrime(PPrime);
+}
+
+float calculateEnergy(SimpleMesh mesh){ // TODO: not sure if implemented energy function correctly
+    cout<<"calculateenergy"<<endl;
+    float energy= 0.0f;
+    for(int i=0; i<mesh.getNumberOfVertices(); ++i){
+        vector<int> neighbors = mesh.getNeighborsOf(i);
+        int numNeighbors = neighbors.size();
+        float energy=0;
+
+        for ( int j = 0; j< numNeighbors; ++j)
+        {
+            Vector3f v= ((mesh.getVertex(i) - mesh.getVertex(j)) - mesh.getRotation(i) * (mesh.getDeformedVertex(i) - mesh.getDeformedVertex(j))); 
+            energy += pow(v[0]*v[0] + v[1]*v[1]+v[2]*v[2], 2);
+        } 
+    }
+    return energy;
+}
+
+void applyDeformation(SimpleMesh mesh, int iterations){
+    float energy=0.0f;
+    cout<<"Applying deformation"<<endl;
+    while(iterations>0){
+
+        //TODO Initial guess for pprime needed
+
+        for(int i=0; i< mesh.getNumberOfVertices(); ++i){
+            estimateRotation(mesh, i);
+        }
+        estimateVertices(mesh);
+        float energy_i = calculateEnergy(mesh);        
+        cout<< "Iterations left: "<< iterations<< "  Local error: "<< energy_i << endl;
+
+        energy = energy_i;
+        iterations--;
+    }
+    cout<< "Resulting energy: "<< energy<< endl;
+}

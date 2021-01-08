@@ -1,46 +1,42 @@
 #include <iostream>
 #include <fstream>
+#include <chrono>
 
 #include "Eigen.h"
 #include "VirtualSensor.h"
 #include "SimpleMesh.h"
 #include "ICPOptimizer.h"
-#include "ARAPOptimizer.h"
+#include "Arap.h"
 #include "PointCloud.h"
 using namespace std;
 
 
 int main() {
 	// Load the source and target mesh.
-	const std::string filenameMesh = std::string("/home/nnrthmr/Code/MotionCaptring&3dScanning_WS20/FinalProject/arap/data/bunny/bunny.off");
+	const std::string filenameMesh = std::string("../../data/bunny/bunny.off");
 
-	vector<Vector4f> fixedPoints;
-	fixedPoints.push_back(Vector4f(0.0060412, 0.1249436, 0.03265289, 1)); 
-	fixedPoints.push_back(Vector4f(-0.01346903, 0.1629936, -0.01200002, 1)); 
-	fixedPoints.push_back(Vector4f(-0.03439324, 0.1723669, -0.0009821299, 1));  
+	vector<int> fixedPoints;
+	fixedPoints.push_back(6); 
+	fixedPoints.push_back(7); 
+	fixedPoints.push_back(8);  
 
-	Vector4f handle(0.037177, 0.110644, 0.018811, 1); // left ear
+	int handle = 140; // left ear
+	Vector4f handleMoved(2*0.037177, 2*0.110644, 2*0.018811, 1); // left ear moved
 
 	SimpleMesh sourceMesh;
-	if (!sourceMesh.loadMesh(filenameMesh, fixedPoints)) {
+	if (!sourceMesh.loadMesh(filenameMesh, fixedPoints, handle)) {
 		std::cout << "Mesh file wasn't read successfully at location: " << filenameMesh << std::endl;
 		return -1;
 	}
 
-	// ARAPOptimizer *optimizer = new ARAPOptimizer();
-	// optimizer->setNumIterations(10);
+	auto t1 = std::chrono::high_resolution_clock::now();
+	applyDeformation(sourceMesh, 1);
+	auto t2 = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<float> eps = t2 - t1;
+	std::cout << "Deformation completed in "<< eps.count() <<" seconds." << std::endl;
 
-	// PointCloud mesh{ sourceMesh };
-	// Matrix4f estimatedPose = optimizer->deform();
+	//sourceMesh.writeMesh("../../data/bunny/deformedMesh.off");
 
-	std::cout << "ARAP done." << std::endl;
-
-	// delete optimizer;
-
-
-	// 1. Mesh load() : does all initializing and computes weight matrix and laplacian
-	// 2. update laplacian if fixed points changed
-	// 3. 
 
 	/*
 	d = Deformer(filename)
@@ -56,7 +52,6 @@ int main() {
 	d.apply_deformation(iterations)
 	print("Total iteration time", time.time() - t)
 	d.output_s_prime_to_file()
-	d.show_graph()
 	*/
 
 	return 0;
