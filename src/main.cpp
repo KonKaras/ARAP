@@ -12,7 +12,6 @@
 
 using namespace std;
 
-
 int main() {
 	// Load the source and target mesh.
 	const std::string filenameMesh = std::string("../data/bunny/bunny.off");//"/home/nnrthmr/Code/MotionCaptring&3dScanning_WS20/FinalProject/arap/data/bunny/bunny_part1.off");
@@ -32,8 +31,8 @@ int main() {
 
 	std::cout << "ARAP done." << std::endl;
 
-	GUI* gui = new GUI();
-	gui->display(filenameMesh);
+	GUI* gui = new GUI(filenameMesh);
+	//gui->display(filenameMesh);
 	
 	// delete optimizer;
 
