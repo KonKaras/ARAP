@@ -42,7 +42,7 @@ public:
 
 		igl::opengl::glfw::Viewer viewer;
 
-		viewer.callback_mouse_down = [&arapMode, &vertices, &faces, &colors, &selectedFacesRef] (igl::opengl::glfw::Viewer& viewer, int, int) -> bool
+		viewer.callback_mouse_down = [this, &arapMode, &vertices, &faces, &colors, &selectedFacesRef] (igl::opengl::glfw::Viewer& viewer, int, int) -> bool
 		{
 			int fid;
 			Eigen::Vector3f bc;
@@ -56,41 +56,33 @@ public:
 					if (selectedFacesRef.find(fid) == selectedFacesRef.end()) {
 						//select face
 						selectedFacesRef.insert(fid);
-						colors.row(fid) << 1, 0, 0;
-						viewer.data().set_colors(colors);
-						//UpdateColor(fid, Eigen::Vector3d(1,0,0), colors, viewer);
+						UpdateColor(fid, Eigen::Vector3d(1,0,0), colors, viewer);
 						return true;
 					}
 					else {
 						//unselect face
 						selectedFacesRef.erase(fid);
-						colors.row(fid) << 1, 1, 1;
-						viewer.data().set_colors(colors);
-						//UpdateColor(fid, Eigen::Vector3d(1, 1, 1), colors, viewer);
+						UpdateColor(fid, Eigen::Vector3d(1, 1, 1), colors, viewer);
 						return true;
 					}
 				}
 			}
 			return false;
 		};
-		viewer.callback_key_down = [&arapMode, &colors, &selectedFacesRef](igl::opengl::glfw::Viewer& viewer, unsigned char key, int modifier) -> bool
+		viewer.callback_key_down = [this, &arapMode, &colors, &selectedFacesRef](igl::opengl::glfw::Viewer& viewer, unsigned char key, int modifier) -> bool
 		{
 			if (key == '1') {
 				arapMode = !arapMode;
 				if (arapMode) {
 					for each (int fid in selectedFacesRef)
 					{
-						colors.row(fid) << 0, 0, 1;
-						viewer.data().set_colors(colors);
-						//UpdateColor(fid, Eigen::Vector3d(0, 0, 1), colors, viewer);
+						UpdateColor(fid, Eigen::Vector3d(0, 0, 1), colors, viewer);
 					}
 				}
 				else {
 					for each (int fid in selectedFacesRef)
 					{
-						colors.row(fid) << 1, 0, 0;
-						viewer.data().set_colors(colors);
-						//UpdateColor(fid, Eigen::Vector3d(1, 0, 0), colors, viewer);
+						UpdateColor(fid, Eigen::Vector3d(1, 0, 0), colors, viewer);
 					}
 				}
 
@@ -104,15 +96,14 @@ public:
 		//display mesh
 		viewer.data().set_mesh(vertices, faces);
 		viewer.data().set_colors(colors);
+		viewer.data().show_lines = true;
 		viewer.launch();
 	}
 
 
 private:
-	//TODO: only single triangle colored when called in lambda expressions? rest is white
-	void UpdateColor(int faceID, Eigen::Vector3d newColor, Eigen::MatrixXd colors, igl::opengl::glfw::Viewer& viewer) {
+	void UpdateColor(int faceID, Eigen::Vector3d newColor, Eigen::MatrixXd& colors, igl::opengl::glfw::Viewer& viewer) {
 		colors.row(faceID) << newColor(0), newColor(1), newColor(2);
 		viewer.data().set_colors(colors);
-		std::cout << newColor << std::endl;
 	}
 };
