@@ -71,14 +71,16 @@ float calculateEnergy(SimpleMesh mesh){ // TODO: not sure if implemented energy 
     float energy= 0.0f;
     for(int i=0; i<mesh.getNumberOfVertices(); ++i){
         vector<int> neighbors = mesh.getNeighborsOf(i);
-        int numNeighbors = neighbors.size();
-        float energy=0;
+        // int numNeighbors = neighbors.size();
+        float cell_energy=0;
 
-        for ( int j = 0; j< numNeighbors; ++j)
+        for ( int j : neighbors)
         {
-            Vector3f v= ((mesh.getVertex(i) - mesh.getVertex(j)) - mesh.getRotation(i) * (mesh.getDeformedVertex(i) - mesh.getDeformedVertex(j))); 
-            energy += pow(v[0]*v[0] + v[1]*v[1]+v[2]*v[2], 2);
+            Vector3f v= ((mesh.getDeformedVertex(i) - mesh.getDeformedVertex(j)) - mesh.getRotation(i) * (mesh.getVertex(i) - mesh.getVertex(j))); 
+            cell_energy += pow(v[0]*v[0] + v[1]*v[1]+v[2]*v[2], 2); //TODO fix weights
+            // cell_energy += mesh.getWeight(i,j) * pow(v[0]*v[0] + v[1]*v[1]+v[2]*v[2], 2);
         } 
+        energy+=cell_energy;
     }
     return energy;
 }
@@ -88,6 +90,7 @@ void applyDeformation(SimpleMesh mesh, int handleID, Vector4f handleNewPosition,
     float energy=0.0f;
     cout<<"Applying deformation for handle with ID " << handleID << " to new position " << handleNewPosition.x() <<","<< handleNewPosition.y()<< ","<< handleNewPosition.z()<<endl;
     while(iterations>0){
+        
 
         //TODO Initial guess for pprime ?
 

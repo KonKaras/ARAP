@@ -352,7 +352,7 @@ public:
 
 	void copyPPrime(){
 		m_vertices.clear();
-		for(Vertex v : m_vertices){
+		for(Vertex v : m_verticesPrime){
 			m_vertices.push_back(v);
 		}
 	}
@@ -407,7 +407,7 @@ public:
 	double angleBetweenVectors(Vector4f a, Vector4f b) {
 		Vector3f a3(a.x(), a.y(), a.z());
 		Vector3f b3(b.x(), b.y(), b.z());
-		return std::atan2(a3.cross(b3).norm(), a3.dot(b3));
+		return atan2(a3.cross(b3).norm(), a3.dot(b3));
 	}
 
 	vector<int> getFixedVertices(){
@@ -436,7 +436,7 @@ public:
 			int other_vertex_id = getThirdFacePoint(i, j, f);
             Vertex vertex_o = m_vertices[other_vertex_id];
 
-            float theta = angleBetweenVectors(vertex_i.position - vertex_o.position, vertex_j.position - vertex_o.position);
+            float theta = angleBetweenVectors(vertex_i.position - vertex_o.position, vertex_j.position - vertex_o.position); //TODO is this correct???
             cot_theta_sum += (1 / tan(theta));
 		}
             

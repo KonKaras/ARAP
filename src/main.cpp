@@ -21,7 +21,7 @@ int main() {
 	fixedPoints.push_back(8);  
 
 	int handleID = 140; // left ear
-	Vector4f handleMoved(2*0.037177, 2*0.110644, 2*0.018811, 1); // left ear moved to new position (2*original position)
+	Vector4f handleMoved(2*0.037177, 2*0.110644, 2*0.018811, 3); // left ear moved to new position (2*original position)
 
 	SimpleMesh sourceMesh;
 	if (!sourceMesh.loadMesh(filenameMesh, fixedPoints, handleID)) {
@@ -30,7 +30,7 @@ int main() {
 	}
 
 	auto t1 = std::chrono::high_resolution_clock::now();
-	applyDeformation(sourceMesh, handleID, handleMoved, 1);
+	applyDeformation(sourceMesh, handleID, handleMoved, 2);
 	auto t2 = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<float> eps = t2 - t1;
 	std::cout << "Deformation completed in "<< eps.count() <<" seconds." << std::endl;
