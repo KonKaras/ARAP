@@ -20,22 +20,22 @@ int main() {
 	fixedPoints.push_back(7); 
 	fixedPoints.push_back(8);  
 
-	int handle = 140; // left ear
-	Vector4f handleMoved(2*0.037177, 2*0.110644, 2*0.018811, 1); // left ear moved
+	int handleID = 140; // left ear
+	Vector4f handleMoved(2*0.037177, 2*0.110644, 2*0.018811, 1); // left ear moved to new position (2*original position)
 
 	SimpleMesh sourceMesh;
-	if (!sourceMesh.loadMesh(filenameMesh, fixedPoints, handle)) {
+	if (!sourceMesh.loadMesh(filenameMesh, fixedPoints, handleID)) {
 		std::cout << "Mesh file wasn't read successfully at location: " << filenameMesh << std::endl;
 		return -1;
 	}
 
 	auto t1 = std::chrono::high_resolution_clock::now();
-	applyDeformation(sourceMesh, 1);
+	applyDeformation(sourceMesh, handleID, handleMoved, 1);
 	auto t2 = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<float> eps = t2 - t1;
 	std::cout << "Deformation completed in "<< eps.count() <<" seconds." << std::endl;
 
-	//sourceMesh.writeMesh("../../data/bunny/deformedMesh.off");
+	sourceMesh.writeMesh("../../data/bunny/deformedMesh.off");
 
 
 	/*

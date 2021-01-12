@@ -192,7 +192,9 @@ public:
 			m_fixedVertices.push_back(f);
 		}
 
+		//Handle is last fixedVertex
 		m_fixedVertices.push_back(handle);
+		m_handleID = handle;
 
 		cout << m_fixedVertices.size() << " in m_fixedVertices" <<endl;
 
@@ -304,6 +306,15 @@ public:
 		return Vector3f(m_vertices[i].position.x(),m_vertices[i].position.y(),m_vertices[i].position.z());
 	}
 
+	// When filling the B vector the new handle position is needed, however for other functions the old position is needed which is 
+	// Why we have the two functions getVertex() and getVertexForFillingB()
+	Vector3f getVertexForFillingB(int i){ 
+		if(i==m_handleID)
+			return Vector3f(m_newHandlePosition.x(),m_newHandlePosition.y(),m_newHandlePosition.z());
+		else
+			return Vector3f(m_vertices[i].position.x(),m_vertices[i].position.y(),m_vertices[i].position.z());
+	}
+
 	Vector3f getDeformedVertex(int i){
 		return Vector3f(m_verticesPrime[i].position.x(),m_verticesPrime[i].position.y(),m_verticesPrime[i].position.z());
 	}
@@ -339,6 +350,13 @@ public:
 		
 	}
 
+	void copyPPrime(){
+		m_vertices.clear();
+		for(Vertex v : m_vertices){
+			m_vertices.push_back(v);
+		}
+	}
+
 	MatrixXf getLaplaceMatrix(){
 		return m_laplaceMatrix;
 	}
@@ -354,6 +372,10 @@ public:
 			}
 		}
 		return -1;
+	}
+
+	void setNewHandlePosition(Vector4f newPosition){
+		m_newHandlePosition = newPosition;
 	}
 
 	void buildWeightMatrix(){
@@ -386,6 +408,10 @@ public:
 		Vector3f a3(a.x(), a.y(), a.z());
 		Vector3f b3(b.x(), b.y(), b.z());
 		return std::atan2(a3.cross(b3).norm(), a3.dot(b3));
+	}
+
+	vector<int> getFixedVertices(){
+		return m_fixedVertices;
 	}
 
     float computeWeightForPair(int i, int j){
@@ -425,6 +451,7 @@ public:
         int num_fixedVertices = m_fixedVertices.size();
 
         int n = m_numV + num_fixedVertices; //for each fixed vertice, add a new row and col
+		cout << "Calculation Laplacian Matrix of size ("<<n<<","<<n<<")"<<endl;
         MatrixXf m = MatrixXf::Zero(n,n); 
         
 		for(int i=0;i<m_numV;i++){ // Eigen::block() not with non constant vars
@@ -462,7 +489,7 @@ public:
 		}
 	}
 
-    // Writes deformed mesh to file
+    // Writes mesh to file
 	bool writeMesh(const std::string& filename) { 
 		// Write off file.
 		std::ofstream outFile(filename);
@@ -470,11 +497,11 @@ public:
 
 		// Write header.
 		outFile << "COFF" << std::endl;
-		outFile << m_verticesPrime.size() << " " << m_triangles.size() << " 0" << std::endl;
+		outFile << m_vertices.size() << " " << m_triangles.size() << " 0" << std::endl;
 
 		// Save vertices.
-		for (unsigned int i = 0; i < m_verticesPrime.size(); i++) {
-			const auto& vertex = m_verticesPrime[i];
+		for (unsigned int i = 0; i < m_vertices.size(); i++) {
+			const auto& vertex = m_vertices[i];
 			if (vertex.position.allFinite())
 				outFile << vertex.position.x() << " " << vertex.position.y() << " " << vertex.position.z() << " "
 				<< int(vertex.color.x()) << " " << int(vertex.color.y()) << " " << int(vertex.color.z()) << " " << int(vertex.color.w()) << std::endl;
@@ -643,6 +670,7 @@ public:
 private:
 	vector<Vertex> m_vertices;
 	vector<int> m_fixedVertices;
+	vector<Vertex> m_fixedVerticesPositions;
 	vector<Vertex> m_verticesPrime;
 	vector<Triangle> m_triangles;
 	MatrixXf m_neighborMatrix;
@@ -653,6 +681,8 @@ private:
 	MatrixXf m_weightMatrix, m_weightSum;
 	vector<vector<Vector4f>> m_distances;
 	int m_numV;
+	int m_handleID;
+	Vector4f m_newHandlePosition;
 
 
 	/**

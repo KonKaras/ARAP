@@ -6,7 +6,7 @@
 using namespace std;
 
 void estimateRotation(SimpleMesh mesh, int vertexID) {
-		// Assume vertices are fix, solve for rotations
+		// Assume vertices are fix, solve for rotations with Procrustes
 
         // Sorkine paper: PDP' for vertex i with neighbors j (P contains edges of fan as cols, P' edges of deformed fan, D diagonal with weights w_ij)
 		Matrix3f rotation = Matrix3f::Identity();
@@ -29,7 +29,7 @@ void estimateRotation(SimpleMesh mesh, int vertexID) {
 		if(rotation.determinant() == -1)
 		{
             MatrixXf svd_u = svd.matrixU();
-            svd_u.rightCols(1) = svd_u.rightCols(1) * -1;
+            svd_u.rightCols(1) = svd_u.rightCols(1) * -1; 
 			//rotation = svd.matrixV() * Matrix3f::Identity() * Vector3f(1,1,-1) * svd.matrixU().transpose();
 			rotation = svd.matrixV() * svd_u.transpose();
 		}
@@ -54,17 +54,20 @@ void estimateVertices(SimpleMesh mesh){
     {
         b.row(i) = calculateB(mesh, i);
     }
+    vector<int> fixedVertices = mesh.getFixedVertices();
     for(int i=0; i< mesh.getNumberOfFixedVertices(); ++i){
-        b.row(mesh.getNumberOfVertices()+i) = mesh.getVertex(i);
+        int fixedVertex = fixedVertices[i];
+        b.row(mesh.getNumberOfVertices()+i) = mesh.getVertexForFillingB(fixedVertex);
     }
 
     //Solve LES with Cholesky, L positive definite // TODO test sparse cholesky on sparse eigen matrices
     MatrixXf PPrime = mesh.getLaplaceMatrix().llt().solve(b);
+    cout<< "PPrime of size: (" << PPrime.rows()<<" , " <<PPrime.cols() << " )"<<endl;
     mesh.setPPrime(PPrime);
 }
 
 float calculateEnergy(SimpleMesh mesh){ // TODO: not sure if implemented energy function correctly
-    cout<<"calculateenergy"<<endl;
+    cout<<"Calculating energy"<<endl;
     float energy= 0.0f;
     for(int i=0; i<mesh.getNumberOfVertices(); ++i){
         vector<int> neighbors = mesh.getNeighborsOf(i);
@@ -80,12 +83,13 @@ float calculateEnergy(SimpleMesh mesh){ // TODO: not sure if implemented energy 
     return energy;
 }
 
-void applyDeformation(SimpleMesh mesh, int iterations){
+void applyDeformation(SimpleMesh mesh, int handleID, Vector4f handleNewPosition, int iterations){
+    mesh.setNewHandlePosition(handleNewPosition);
     float energy=0.0f;
-    cout<<"Applying deformation"<<endl;
+    cout<<"Applying deformation for handle with ID " << handleID << " to new position " << handleNewPosition.x() <<","<< handleNewPosition.y()<< ","<< handleNewPosition.z()<<endl;
     while(iterations>0){
 
-        //TODO Initial guess for pprime needed
+        //TODO Initial guess for pprime ?
 
         for(int i=0; i< mesh.getNumberOfVertices(); ++i){
             estimateRotation(mesh, i);
@@ -94,8 +98,14 @@ void applyDeformation(SimpleMesh mesh, int iterations){
         float energy_i = calculateEnergy(mesh);        
         cout<< "Iterations left: "<< iterations<< "  Local error: "<< energy_i << endl;
 
+        mesh.copyPPrime();
+
         energy = energy_i;
         iterations--;
     }
-    cout<< "Resulting energy: "<< energy<< endl;
+    cout << "Resulting energy: "<< energy<< endl;
+    cout << "PPrime[handleID] is "<< mesh.getDeformedVertex(handleID).x() <<","<< mesh.getDeformedVertex(handleID).y()<< ","<< mesh.getDeformedVertex(handleID).z()<<endl;
+    // assert(mesh.getDeformedVertex(handleID).x() == handleNewPosition.x());
+    // assert(mesh.getDeformedVertex(handleID).y() == handleNewPosition.y());
+    // assert(mesh.getDeformedVertex(handleID).z() == handleNewPosition.z());
 }
