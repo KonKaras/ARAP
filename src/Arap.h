@@ -57,15 +57,9 @@ Vector3f calculateB(SimpleMesh *mesh, int i){
     vector<int> neighbors = mesh->getNeighborsOf(i);
     int numNeighbors = neighbors.size();
     Vector3f b = Vector3f::Zero();
-    // 
     cout<<"calculateB() for "<<i<<endl;
     for ( int neighborID : neighbors)
     {
-        // cout <<(mesh.getVertex(i) - mesh.getVertex(neighborID)) <<endl;
-        // cout <<(mesh.getRotation(i)+ mesh.getRotation(neighborID)) <<endl;
-        // cout <<(mesh.getRotation(i)+ mesh.getRotation(neighborID))*(mesh.getVertex(i) - mesh.getVertex(neighborID)) <<endl;
-        // cout <<mesh.getWeight(i, neighborID) * 0.5 * (mesh.getRotation(i)+ mesh.getRotation(neighborID))*(mesh.getVertex(i) - mesh.getVertex(neighborID)) <<endl;
-        // cout<<" "<<endl;
         b += mesh->getWeight(i, neighborID) * 0.5 * (mesh->getRotation(i)+ mesh->getRotation(neighborID))*(mesh->getVertex(i) - mesh->getVertex(neighborID));
     }
     return b;
@@ -86,7 +80,7 @@ void estimateVertices(SimpleMesh *mesh){
     cout<<"b: \n"<<b<<endl;
     //Solve LES with Cholesky, L positive definite // TODO test sparse cholesky on sparse eigen matrices
     cout<<"Solving LES ..." <<endl;
-    MatrixXf PPrime = mesh->getLaplaceMatrix().llt().solve(b);
+    MatrixXf PPrime = mesh->getLaplaceMatrix().ldlt().solve(b);
     cout<<"Done!"<<endl;
     cout<<"PPrime Result:" <<endl;
     cout<<PPrime<<endl;

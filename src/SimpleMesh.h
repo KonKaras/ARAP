@@ -182,9 +182,12 @@ public:
 		unsigned int numE = 0; //edges
 		file >> numV >> numP >> numE;
 
-		m_vertices.reserve(numV);
-		m_verticesPrime.reserve(numV);
-		m_triangles.reserve(numP);
+		// m_vertices.reserve(numV);
+		// m_verticesPrime.reserve(numV);
+		//m_fixedVertices = vector<int>(fixedPoints.size());
+
+		// m_vertices = vector<Vertex>(numV);
+		// m_verticesPrime = vector<Vertex>(numV);
 
 		m_numV = numV;
 
@@ -241,6 +244,7 @@ public:
         m_cellRotations = std::vector<MatrixXf>(m_numV); // list of Rs per fan
 		m_precomputedPMatrices = vector<MatrixXf>(m_numV);
 		m_edgeMatrix = MatrixXf::Zero(m_numV,m_numV); //Diagonal how many edges from vertex out
+		m_triangles = vector<Triangle>(numP);
 
 		// Read faces (i.e. triangles).
 		for (unsigned int i = 0; i < numP; i++) {
