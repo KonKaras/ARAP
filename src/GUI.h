@@ -33,9 +33,6 @@ private:
 		Eigen::MatrixXd vertices, colors;
 		Eigen::MatrixXi faces;
 
-		auto& staticFacesRef = staticFaces;
-		auto& faceHandlesRef = faceHandles;
-
 		igl::readOFF(filenameMesh, vertices, faces);
 
 		//init white
@@ -62,7 +59,7 @@ private:
 				if (igl::unproject_onto_mesh(Eigen::Vector2f(x, y), viewer.core().view,
 					viewer.core().proj, viewer.core().viewport, vertices, faces, fid, bc))
 				{
-					ClickerHandler(staticFaces, faceHandles, fid, colors, viewer);
+					ClickerHandler(fid, colors, viewer);
 					return true;
 				}
 				return false;
@@ -87,7 +84,6 @@ private:
 				else {
 					for each (int fid in staticFaces)
 					{
-						std::cout << "blue" << std::endl;
 						UpdateColor(fid, Eigen::Vector3d(1, 0, 0), colors, viewer);
 					}
 				}
@@ -99,9 +95,12 @@ private:
 			//Toggle handle selection
 			if (key == '2') {
 				arapMode = false;
-				handleSelectionMode = !handleSelectionMode;
-				std::string out = handleSelectionMode ? "Handle Selection active" : "Static Face Selection active";
-				std::cout << out << std::endl;
+				for each (int fid in staticFaces)
+				{
+					UpdateColor(fid, Eigen::Vector3d(1, 0, 0), colors, viewer);
+				}
+				handleSelectionMode = true;		
+				std::cout << "Handle Selection Active, ARAP Paused" << std::endl;
 			}
 			return true;
 		};
@@ -113,22 +112,16 @@ private:
 		viewer.launch();
 	}
 
-	bool ClickerHandler(std::set<int>& staticFaces, std::set<int>& handles, int fid, Eigen::MatrixXd& colors, igl::opengl::glfw::Viewer& viewer)
+	bool ClickerHandler(int fid, Eigen::MatrixXd& colors, igl::opengl::glfw::Viewer& viewer)
 	{
-		auto& faces = handleSelectionMode ? handles : staticFaces;
+		auto& faces = handleSelectionMode ? faceHandles : staticFaces;
 		auto newColor = handleSelectionMode ? Vector3d(0, 1, 0) : Vector3d(1, 0, 0);
 
 		if (faces.find(fid) == faces.end()) {
-			/*
-			//no static face should be a handle -> cannot be assigned
-			if (handleSelectionMode && staticFaces.find(fid) != staticFaces.end()) {
-				return false;
-			}
-			*/
 			//select face
 			faces.insert(fid);
 			UpdateColor(fid, newColor, colors, viewer);
-			std::cout << fid << std::endl;
+			//std::cout << fid << std::endl;
 		}
 		else {
 			//unselect face
@@ -137,9 +130,10 @@ private:
 		}
 
 		//remove from other set if necessary, a handle cannot be static and a static face cannot be a handle
-		auto& otherFaces = handleSelectionMode ? staticFaces : handles;
-		if (otherFaces.find(fid) == otherFaces.end()) {
+		auto& otherFaces = handleSelectionMode ? staticFaces : faceHandles;
+		if (otherFaces.find(fid) != otherFaces.end()) {
 			otherFaces.erase(fid);
+			//std::cout << "erased face " + std::to_string(fid) + " from " + (handleSelectionMode ? "staticFaces" : "faceHandles") << std::endl;
 		}
 		return true;
 	}
