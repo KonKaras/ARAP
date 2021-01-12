@@ -239,6 +239,7 @@ public:
 		m_neighborMatrix = MatrixXf::Zero(m_numV, m_numV);
 		m_verticesToFaces = std::vector<std::vector<unsigned int>>(m_numV); //vtf[i] contains faces that contain vertex ID i
         m_cellRotations = std::vector<MatrixXf>(m_numV); // list of Rs per fan
+		m_precomputedPMatrices = vector<MatrixXf>(m_numV);
 		m_edgeMatrix = MatrixXf::Zero(m_numV,m_numV); //Diagonal how many edges from vertex out
 
 		// Read faces (i.e. triangles).
@@ -285,8 +286,43 @@ public:
 		cout << "m_weightSum: " << m_weightSum <<endl;
 		// computeDistances();
 		calculateLaplaceMatrix();
+		precomputePMatrix();
 
 		return true;
+	}
+
+	void printPs(){
+		cout<< "m_vertices:"<< endl;
+		for(Vertex v : m_vertices){
+			cout << v.position.x() << " "<< v.position.y() << " "<< v.position.z() << endl;
+		}
+	}
+
+	void printPPrimes(){
+		cout<< "m_verticesPrime:"<< endl;
+		for(Vertex v : m_verticesPrime){
+			cout << v.position.x() << " "<< v.position.y() << " "<< v.position.z() << endl;
+		}
+	}
+
+	//Precompute P_i s for the arap estimateRotations() function
+	void precomputePMatrix(){
+		
+		for(int i=0; i< m_numV;i++){
+			vector<int> neighbors = getNeighborsOf(i);
+        	int numNeighbors = neighbors.size();
+			MatrixXf P = MatrixXf::Zero(3, numNeighbors);
+			for ( int j = 0; j< numNeighbors; ++j)
+			{   
+				int neighborVertex = neighbors[j];
+				P.col(j) = getVertex(i) - getVertex(neighborVertex);
+			}
+			m_precomputedPMatrices[i] = P;
+		}
+	}
+
+	MatrixXf getPrecomputedP(int i){
+		return m_precomputedPMatrices[i];
 	}
 
 	void addFaceToAdjacencyMatrix(int v1, int v2 ,int v3){
@@ -356,15 +392,14 @@ public:
 			v.position.x() = pprime(i,0);
 			v.position.y() = pprime(i,1);
 			v.position.z() = pprime(i,2);
+			v.position.w() = 1;
 			m_verticesPrime[i] = v;
 		}
-		
 	}
 
 	void copyPPrime(){
-		m_vertices.clear();
-		for(Vertex v : m_verticesPrime){
-			m_vertices.push_back(v);
+		for(int i=0; i< m_numV; i++){
+			m_vertices[i] = m_verticesPrime[i];
 		}
 	}
 
@@ -392,8 +427,8 @@ public:
 	void buildWeightMatrix(){
 
 		cout<<"Generating Weight Matrix"<<endl;
-        m_weightMatrix = MatrixXf(m_numV, m_numV);
-		m_weightSum = MatrixXf(m_numV, m_numV);
+        m_weightMatrix = MatrixXf::Zero(m_numV, m_numV);
+		m_weightSum = MatrixXf::Zero(m_numV, m_numV);
 
         for (int vertex_id= 0; vertex_id < m_numV;vertex_id++){
 			vector<int> neighbors = getNeighborsOf(vertex_id);
@@ -693,6 +728,7 @@ private:
 	int m_numV;
 	int m_handleID;
 	Vector4f m_newHandlePosition;
+	vector<MatrixXf> m_precomputedPMatrices;
 
 
 	/**
