@@ -36,7 +36,7 @@ int main() {
 	}
 
 	auto t1 = std::chrono::high_resolution_clock::now();
-	applyDeformation(sourceMesh, handleID, handleMoved, 1);
+	applyDeformation(sourceMesh, handleID, handleMoved, 2);
 	auto t2 = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<float> eps = t2 - t1;
 	std::cout << "Deformation completed in "<< eps.count() <<" seconds." << std::endl;

@@ -17,12 +17,23 @@ void estimateRotation(SimpleMesh mesh, int vertexID) {
 		MatrixXf PPrime (3, numNeighbors);
         MatrixXf D (numNeighbors, numNeighbors);
 
+        cout<< "In estimate rots()"<< endl;
+
 		for ( int j = 0; j< numNeighbors; ++j)
-		{
-			P.col(j) = mesh.getVertex(vertexID) - mesh.getVertex(j);
-			PPrime.col(j) = mesh.getDeformedVertex(vertexID) - mesh.getDeformedVertex(j);
-            D(j,j) = mesh.getWeight(vertexID, j);
+		{   
+            int neighborVertex = neighbors[j];
+			P.col(j) = mesh.getVertex(vertexID) - mesh.getVertex(neighborVertex);
+			PPrime.col(j) = mesh.getDeformedVertex(vertexID) - mesh.getDeformedVertex(neighborVertex);
+            D(j,j) = mesh.getWeight(vertexID, neighborVertex);
 		} 
+
+        cout<< "ESTIMATEROTS "<<vertexID<<endl;
+        cout<< P << endl;
+        cout<< " "<<endl;
+        cout<< PPrime << endl;
+        cout<< " "<<endl;
+        cout<< D << endl;
+        cout<< " "<<endl;
 
 		JacobiSVD<MatrixXf> svd(P * D * PPrime.transpose(), ComputeFullU | ComputeFullV);
 
@@ -35,6 +46,7 @@ void estimateRotation(SimpleMesh mesh, int vertexID) {
 			//rotation = svd.matrixV() * Matrix3f::Identity() * Vector3f(1,1,-1) * svd.matrixU().transpose();
 			rotation = svd.matrixV() * svd_u.transpose();
 		}
+        cout<< rotation << endl;
 
 		mesh.setRotation(vertexID, rotation);
 }
@@ -62,11 +74,12 @@ void estimateVertices(SimpleMesh mesh){
         b.row(mesh.getNumberOfVertices()+i) = mesh.getVertexForFillingB(fixedVertex);
     }
 
+    cout<<"b: \n"<<b<<endl;
     //Solve LES with Cholesky, L positive definite // TODO test sparse cholesky on sparse eigen matrices
     cout<<"Solving LES ..." <<endl;
     MatrixXf PPrime = mesh.getLaplaceMatrix().llt().solve(b);
     cout<<"Done!"<<endl;
-    // cout<< "PPrime of size: (" << PPrime.rows()<<" , " <<PPrime.cols() << " )"<<endl;
+    cout<<"pprime: \n"<<PPrime<<endl;
     mesh.setPPrime(PPrime);
 }
 

@@ -227,6 +227,7 @@ public:
 				v.color.z() = 0;
 				v.color.w() = 255;
 				m_vertices.push_back(v);
+				//TODO How do we initialize PPrime?
 				m_verticesPrime.push_back(v);
 			}
 		}
@@ -257,6 +258,11 @@ public:
 			(m_verticesToFaces[t.idx2]).push_back(i);
 
 		}
+		// for(int i=0; i< m_verticesToFaces.size(); ++i){
+		// 	for(int j=0; j< m_verticesToFaces[i].size(); ++j){
+		// 		cout<<"m_vertsToFaces "<<i<<": "<<m_verticesToFaces[i][j]<<endl;
+		// 	}
+		// }
 
 		for(int i=0; i<numV;i++){
 		 	m_edgeMatrix(i,i) = (m_neighborMatrix.rowwise().sum())[i];
@@ -267,10 +273,16 @@ public:
 		cout << "numFaces: "<<numP<<endl;
 		cout << "numEdges: "<<numE<<endl;
 
+		// cout << "Edgematrix: " << m_edgeMatrix <<endl;
+		// cout << "Adjacencymatrix: " << m_neighborMatrix <<endl;
+
 		// cout << m_edgeMatrix.rows() << " - " << m_edgeMatrix.cols()<< endl;
 		// cout << m_neighborMatrix.rows() << " - " << m_neighborMatrix.cols()<< endl;
 
 		buildWeightMatrix();
+
+		cout << "m_weightmatrix: " << m_weightMatrix <<endl;
+		cout << "m_weightSum: " << m_weightSum <<endl;
 		// computeDistances();
 		calculateLaplaceMatrix();
 
