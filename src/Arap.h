@@ -23,7 +23,9 @@ void estimateRotation(SimpleMesh mesh, int vertexID) {
 			PPrime.col(j) = mesh.getDeformedVertex(vertexID) - mesh.getDeformedVertex(j);
             D(j,j) = mesh.getWeight(vertexID, j);
 		} 
+
 		JacobiSVD<MatrixXf> svd(P * D * PPrime.transpose(), ComputeFullU | ComputeFullV);
+
 		rotation = svd.matrixV() * svd.matrixU().transpose();
 
 		if(rotation.determinant() == -1)
@@ -61,13 +63,14 @@ void estimateVertices(SimpleMesh mesh){
     }
 
     //Solve LES with Cholesky, L positive definite // TODO test sparse cholesky on sparse eigen matrices
+    cout<<"Solving LES ..." <<endl;
     MatrixXf PPrime = mesh.getLaplaceMatrix().llt().solve(b);
-    cout<< "PPrime of size: (" << PPrime.rows()<<" , " <<PPrime.cols() << " )"<<endl;
+    cout<<"Done!"<<endl;
+    // cout<< "PPrime of size: (" << PPrime.rows()<<" , " <<PPrime.cols() << " )"<<endl;
     mesh.setPPrime(PPrime);
 }
 
 float calculateEnergy(SimpleMesh mesh){ // TODO: not sure if implemented energy function correctly
-    cout<<"Calculating energy"<<endl;
     float energy= 0.0f;
     for(int i=0; i<mesh.getNumberOfVertices(); ++i){
         vector<int> neighbors = mesh.getNeighborsOf(i);
@@ -77,8 +80,7 @@ float calculateEnergy(SimpleMesh mesh){ // TODO: not sure if implemented energy 
         for ( int j : neighbors)
         {
             Vector3f v= ((mesh.getDeformedVertex(i) - mesh.getDeformedVertex(j)) - mesh.getRotation(i) * (mesh.getVertex(i) - mesh.getVertex(j))); 
-            cell_energy += pow(v[0]*v[0] + v[1]*v[1]+v[2]*v[2], 2); //TODO fix weights
-            // cell_energy += mesh.getWeight(i,j) * pow(v[0]*v[0] + v[1]*v[1]+v[2]*v[2], 2);
+            cell_energy += mesh.getWeight(i,j) * pow(v[0]*v[0] + v[1]*v[1]+v[2]*v[2], 2);
         } 
         energy+=cell_energy;
     }
@@ -88,9 +90,10 @@ float calculateEnergy(SimpleMesh mesh){ // TODO: not sure if implemented energy 
 void applyDeformation(SimpleMesh mesh, int handleID, Vector4f handleNewPosition, int iterations){
     mesh.setNewHandlePosition(handleNewPosition);
     float energy=0.0f;
+    int iter=0;
     cout<<"Applying deformation for handle with ID " << handleID << " to new position " << handleNewPosition.x() <<","<< handleNewPosition.y()<< ","<< handleNewPosition.z()<<endl;
-    while(iterations>0){
-        
+    while(iter<iterations){
+        cout<<"[Iteration "<<iter<<"]"<<endl;
 
         //TODO Initial guess for pprime ?
 
@@ -99,12 +102,12 @@ void applyDeformation(SimpleMesh mesh, int handleID, Vector4f handleNewPosition,
         }
         estimateVertices(mesh);
         float energy_i = calculateEnergy(mesh);        
-        cout<< "Iterations left: "<< iterations<< "  Local error: "<< energy_i << endl;
+        cout<< "Iteration: "<< iter<< "  Local error: "<< energy_i << endl;
 
         mesh.copyPPrime();
 
         energy = energy_i;
-        iterations--;
+        iter++;
     }
     cout << "Resulting energy: "<< energy<< endl;
     cout << "PPrime[handleID] is "<< mesh.getDeformedVertex(handleID).x() <<","<< mesh.getDeformedVertex(handleID).y()<< ","<< mesh.getDeformedVertex(handleID).z()<<endl;

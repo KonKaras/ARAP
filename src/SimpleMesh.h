@@ -188,11 +188,12 @@ public:
 
 		m_numV = numV;
 
+		// Fixed vertices
 		for(int f : fixedPoints){
 			m_fixedVertices.push_back(f);
 		}
 
-		//Handle is last fixedVertex
+		//Handle is last fixed Vertex
 		m_fixedVertices.push_back(handle);
 		m_handleID = handle;
 
@@ -234,12 +235,10 @@ public:
 			return false;
 		}
 
-
-		//Create adjacency matrix
 		m_neighborMatrix = MatrixXf::Zero(m_numV, m_numV);
 		m_verticesToFaces = std::vector<std::vector<unsigned int>>(m_numV); //vtf[i] contains faces that contain vertex ID i
         m_cellRotations = std::vector<MatrixXf>(m_numV); // list of Rs per fan
-		m_edgeMatrix = MatrixXf::Zero(m_numV,m_numV);
+		m_edgeMatrix = MatrixXf::Zero(m_numV,m_numV); //Diagonal how many edges from vertex out
 
 		// Read faces (i.e. triangles).
 		for (unsigned int i = 0; i < numP; i++) {
@@ -249,15 +248,15 @@ public:
 			
 			Triangle t;
 			file >> t.idx0 >> t.idx1 >> t.idx2;
-			m_triangles.push_back(t);
+			m_triangles[i] = t;
 
 			//fill adjacency matrix
 			addFaceToAdjacencyMatrix(t.idx0, t.idx1, t.idx2);  // 1 for neighbors, 0 else
 			(m_verticesToFaces[t.idx0]).push_back(i); // list of facenumbers for each vertex
 			(m_verticesToFaces[t.idx1]).push_back(i);
 			(m_verticesToFaces[t.idx2]).push_back(i);
-		}
 
+		}
 
 		for(int i=0; i<numV;i++){
 		 	m_edgeMatrix(i,i) = (m_neighborMatrix.rowwise().sum())[i];
@@ -272,7 +271,7 @@ public:
 		// cout << m_neighborMatrix.rows() << " - " << m_neighborMatrix.cols()<< endl;
 
 		buildWeightMatrix();
-		computeDistances();
+		// computeDistances();
 		calculateLaplaceMatrix();
 
 		return true;
@@ -407,7 +406,8 @@ public:
 	double angleBetweenVectors(Vector4f a, Vector4f b) {
 		Vector3f a3(a.x(), a.y(), a.z());
 		Vector3f b3(b.x(), b.y(), b.z());
-		return atan2(a3.cross(b3).norm(), a3.dot(b3));
+		// cout<< "here. " << acos((a3).dot(b3)/(a3.norm()*b3.norm()))*180 / M_PI <<endl;
+		return acos((a3).dot(b3)/(a3.norm()*b3.norm()))*180 / M_PI;
 	}
 
 	vector<int> getFixedVertices(){
@@ -443,11 +443,9 @@ public:
         return cot_theta_sum * 0.5;
 	}
 
-	void calculateLaplaceMatrix(){ // TODO not sure if correct
+	void calculateLaplaceMatrix(){ 
         
-        m_laplaceMatrix = m_weightSum - m_weightMatrix;
-		int r = m_laplaceMatrix.rows();
-		int c = m_laplaceMatrix.cols();
+        m_laplaceMatrix = m_weightSum + m_weightMatrix; // TODO not sure if correct
         int num_fixedVertices = m_fixedVertices.size();
 
         int n = m_numV + num_fixedVertices; //for each fixed vertice, add a new row and col
@@ -470,24 +468,24 @@ public:
         m_laplaceMatrix = m;
 	}
 
-	void computeDistances(){
-		m_distances.clear();
-        for (int i=0; i< m_numV; i++){
-            Vertex v_i = m_vertices[i];
-            vector<int> neighbors = getNeighborsOf(i);
-            int numNeighbors = neighbors.size();
+	// void computeDistances(){
+	// 	m_distances.clear();
+    //     for (int i=0; i< m_numV; i++){
+    //         Vertex v_i = m_vertices[i];
+    //         vector<int> neighbors = getNeighborsOf(i);
+    //         int numNeighbors = neighbors.size();
 
-            vector<Vector4f> distance_i(numNeighbors);
+    //         vector<Vector4f> distance_i(numNeighbors);
 
-            for (int j=0; j< numNeighbors; j++){
-                int nId = neighbors[j];
+    //         for (int j=0; j< numNeighbors; j++){
+    //             int nId = neighbors[j];
 
-                Vertex v_j = m_vertices[nId];
-                distance_i[j] = Vector4f(v_i.position - v_j.position);
-			}
-        m_distances.push_back(distance_i);
-		}
-	}
+    //             Vertex v_j = m_vertices[nId];
+    //             distance_i[j] = Vector4f(v_i.position - v_j.position);
+	// 		}
+    //     m_distances.push_back(distance_i);
+	// 	}
+	// }
 
     // Writes mesh to file
 	bool writeMesh(const std::string& filename) { 
@@ -679,7 +677,7 @@ private:
 	MatrixXf m_laplaceMatrix;
 	vector<std::vector<unsigned int>> m_verticesToFaces;
 	MatrixXf m_weightMatrix, m_weightSum;
-	vector<vector<Vector4f>> m_distances;
+	// vector<vector<Vector4f>> m_distances;
 	int m_numV;
 	int m_handleID;
 	Vector4f m_newHandlePosition;
