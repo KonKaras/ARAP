@@ -14,7 +14,7 @@ using namespace std;
 
 int main() {
 	// Load the source and target mesh.
-	const std::string filenameMesh = std::string("../data/bunny/bunny.off");//"/home/nnrthmr/Code/MotionCaptring&3dScanning_WS20/FinalProject/arap/data/bunny/bunny_part1.off");
+	const std::string filenameMesh = std::string("../data/bunny/bunny.off");
 
 	SimpleMesh sourceMesh;
 	if (!sourceMesh.loadMesh(filenameMesh)) {
@@ -52,6 +52,7 @@ int main() {
 	d.output_s_prime_to_file()
 	d.show_graph()
 	*/
+
 
 	return 0;
 }
