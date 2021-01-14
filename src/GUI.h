@@ -172,7 +172,7 @@ private:
 		
 	
 		Eigen::Vector3d sqdistances;
-		Eigen::Vector3d queryPoint = bc(0) * closestPoints.row(0) + bc(1) * closestPoints.row(0)+ bc(2) * closestPoints.row(2);
+		Eigen::Vector3d queryPoint = bc(0) * closestPoints.row(0) + bc(1) * closestPoints.row(1)+ bc(2) * closestPoints.row(2);
 		std::cout << "Query" << std::endl;
 		std::cout << queryPoint << std::endl;
 
