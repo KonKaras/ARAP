@@ -53,21 +53,49 @@ private:
 
 		igl::opengl::glfw::Viewer viewer;
 
-		viewer.callback_mouse_down = [this](igl::opengl::glfw::Viewer& viewer, int, int) -> bool
+		bool paint = true;
+		viewer.callback_mouse_down = [this, &paint](igl::opengl::glfw::Viewer& viewer, int button, int) -> bool
 		{
-			int fid;
-			Eigen::Vector3f bc;
-			// Cast a ray in the view direction starting from the mouse position
-			double x = viewer.current_mouse_x;
-			double y = viewer.core().viewport(3) - viewer.current_mouse_y;
-			if (!arapMode) {
-				if (igl::unproject_onto_mesh(Eigen::Vector2f(x, y), viewer.core().view,
-					viewer.core().proj, viewer.core().viewport, vertices, faces, fid, bc))
+			if (button == 0) {
+				int fid;
+				Eigen::Vector3f bc;
+
+				double x = viewer.current_mouse_x;
+				double y = viewer.core().viewport(3) - viewer.current_mouse_y;
+				bool hasHit = igl::unproject_onto_mesh(Eigen::Vector2f(x, y), viewer.core().view, viewer.core().proj, viewer.core().viewport, vertices, faces, fid, bc);
+				if (hasHit)
 				{
-					ClickerHandler(fid, bc, viewer);
-					return true;
+					paint = true;
+
+					viewer.callback_mouse_up = [&fid, &bc, &paint](igl::opengl::glfw::Viewer& viewer, int button, int) -> bool
+					{
+						if (button == 0) {
+							paint = false;
+							return true;
+						}
+						return false;
+					};
+					viewer.callback_mouse_move = [this, &fid, &bc, &paint](igl::opengl::glfw::Viewer& viewer, int, int) -> bool
+					{
+						if (paint) {
+							// Cast a ray in the view direction starting from the mouse position
+							double xpos = viewer.current_mouse_x;
+							double ypos = viewer.core().viewport(3) - viewer.current_mouse_y;
+
+							bool hasHit = igl::unproject_onto_mesh(Eigen::Vector2f(xpos, ypos), viewer.core().view, viewer.core().proj, viewer.core().viewport, vertices, faces, fid, bc);
+
+							if (!arapMode) {
+								if (hasHit)
+								{
+									ClickerHandler(fid, bc, viewer);
+									return true;
+								}
+								return false;
+							}
+						}
+						return true;
+					};
 				}
-				return false;
 			}
 			//this for free rotation during selection
 			return false;
