@@ -29,6 +29,8 @@ private:
 
 	bool arapMode = false;
 	bool handleSelectionMode = false;
+	bool mouseDown = false;
+	bool vertexHit = false;
 
 	Eigen::MatrixXd vertices, colors;
 	Eigen::MatrixXi faces;
@@ -57,6 +59,7 @@ private:
 		{
 			int fid;
 			Eigen::Vector3f bc;
+			mouseDown = true;
 			// Cast a ray in the view direction starting from the mouse position
 			double x = viewer.current_mouse_x;
 			double y = viewer.core().viewport(3) - viewer.current_mouse_y;
@@ -70,6 +73,33 @@ private:
 				return false;
 			}
 			//this for free rotation during selection
+			return false;
+		};
+
+		viewer.callback_mouse_up = [this](igl::opengl::glfw::Viewer& viewer, int, int) -> bool
+		{
+			mouseDown = false;
+			vertexHit = false;
+			return false;
+		};
+
+		viewer.callback_mouse_move = [this](igl::opengl::glfw::Viewer& viewer, int, int) -> bool
+		{
+			//checks if mouse key is pressed + we are not in arap mode + have selected a vertex with the mouse key press
+			if (mouseDown && !arapMode && vertexHit) {
+				int fid;
+				Eigen::Vector3f bc;
+				// Cast a ray in the view direction starting from the mouse position
+				double x = viewer.current_mouse_x;
+				double y = viewer.core().viewport(3) - viewer.current_mouse_y;
+				if (igl::unproject_onto_mesh(Eigen::Vector2f(x, y), viewer.core().view,
+					viewer.core().proj, viewer.core().viewport, vertices, faces, fid, bc))
+				{
+					ClickerHandler(fid, bc, viewer);
+					return true;
+				}
+				return false;
+			}
 			return false;
 		};
 
@@ -131,6 +161,8 @@ private:
 			int selectedVertex = GetClosestVertexIdFromBC(fid, bc);
 			std::cout << selectedVertex << std::endl;
 			viewer.data().add_points(vertices.row(selectedVertex), Eigen::RowVector3d(0,1,0));
+			//checks that vertex is hit
+			vertexHit = true;
 		}
 		else {
 			//static faces are defined
