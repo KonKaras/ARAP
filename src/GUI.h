@@ -23,12 +23,16 @@ public:
 	}
 
 	std::set<int> staticFaces;
-	std::set<int> faceHandles;
+	std::set<int> handles;
 
 private:
 
 	bool arapMode = false;
 	bool handleSelectionMode = false;
+	bool mouseDown = false;
+	bool vertexHit = false;
+
+	int currentMouseButton = 0;
 
 	Eigen::MatrixXd vertices, colors;
 	Eigen::MatrixXi faces;
@@ -56,48 +60,59 @@ private:
 		bool paint = true;
 		viewer.callback_mouse_down = [this, &paint](igl::opengl::glfw::Viewer& viewer, int button, int) -> bool
 		{
-			if (button == 0) {
+			//checks if mouse key is pressed + we are not in arap mode + have selected a vertex with the mouse key press
+			if (!arapMode) {
+				currentMouseButton = button;
+				mouseDown = true;
+				/*
 				int fid;
 				Eigen::Vector3f bc;
-
+				// Cast a ray in the view direction starting from the mouse position
 				double x = viewer.current_mouse_x;
 				double y = viewer.core().viewport(3) - viewer.current_mouse_y;
-				bool hasHit = igl::unproject_onto_mesh(Eigen::Vector2f(x, y), viewer.core().view, viewer.core().proj, viewer.core().viewport, vertices, faces, fid, bc);
-				if (hasHit)
+				if (igl::unproject_onto_mesh(Eigen::Vector2f(x, y), viewer.core().view,
+					viewer.core().proj, viewer.core().viewport, vertices, faces, fid, bc))
 				{
-					paint = true;
-
-					viewer.callback_mouse_up = [&fid, &bc, &paint](igl::opengl::glfw::Viewer& viewer, int button, int) -> bool
-					{
-						if (button == 0) {
-							paint = false;
-							return true;
-						}
-						return false;
-					};
-					viewer.callback_mouse_move = [this, &fid, &bc, &paint](igl::opengl::glfw::Viewer& viewer, int, int) -> bool
-					{
-						if (paint) {
-							// Cast a ray in the view direction starting from the mouse position
-							double xpos = viewer.current_mouse_x;
-							double ypos = viewer.core().viewport(3) - viewer.current_mouse_y;
-
-							bool hasHit = igl::unproject_onto_mesh(Eigen::Vector2f(xpos, ypos), viewer.core().view, viewer.core().proj, viewer.core().viewport, vertices, faces, fid, bc);
-
-							if (!arapMode) {
-								if (hasHit)
-								{
-									ClickerHandler(fid, bc, viewer);
-									return true;
-								}
-								return false;
-							}
-						}
-						return true;
-					};
+					vertexHit = true;
+					ClickerHandler(fid, bc, viewer);
+					return true;
 				}
+				return false;
+				*/
+				return SelectionHandler(viewer, button);
 			}
-			//this for free rotation during selection
+			return false;
+		};
+
+		viewer.callback_mouse_up = [this](igl::opengl::glfw::Viewer& viewer, int button, int) -> bool
+		{
+			if (button == currentMouseButton) {
+				mouseDown = false;
+				vertexHit = false;
+			}
+			return false;
+		};
+
+		viewer.callback_mouse_move = [this](igl::opengl::glfw::Viewer& viewer, int, int) -> bool
+		{
+			//checks if mouse key is pressed + we are not in arap mode + have selected a vertex with the mouse key press
+			if (mouseDown && !arapMode && vertexHit) {
+				/*
+				int fid;
+				Eigen::Vector3f bc;
+				// Cast a ray in the view direction starting from the mouse position
+				double x = viewer.current_mouse_x;
+				double y = viewer.core().viewport(3) - viewer.current_mouse_y;
+				if (igl::unproject_onto_mesh(Eigen::Vector2f(x, y), viewer.core().view,
+					viewer.core().proj, viewer.core().viewport, vertices, faces, fid, bc))
+				{
+					ClickerHandler(fid, bc, viewer);
+					return true;
+				}
+				*/
+				return SelectionHandler(viewer, currentMouseButton);
+				
+			}
 			return false;
 		};
 
@@ -150,38 +165,83 @@ private:
 		viewer.launch();
 	}
 
-	bool ClickerHandler(int fid, Eigen::Vector3f& bc, igl::opengl::glfw::Viewer& viewer)
+	bool SelectionHandler(igl::opengl::glfw::Viewer& viewer, int& mouseID) {
+		int fid;
+		Eigen::Vector3f bc;
+		// Cast a ray in the view direction starting from the mouse position
+		double x = viewer.current_mouse_x;
+		double y = viewer.core().viewport(3) - viewer.current_mouse_y;
+		if (igl::unproject_onto_mesh(Eigen::Vector2f(x, y), viewer.core().view,
+			viewer.core().proj, viewer.core().viewport, vertices, faces, fid, bc))
+		{
+			vertexHit = true;
+			auto& toSelect = handleSelectionMode ? handles : staticFaces;
+			if(handleSelectionMode) fid = GetClosestVertexIdFromBC(fid, bc);
+			if (mouseID == 0) {
+				Select(fid, bc, toSelect, viewer);
+			}
+			else if(mouseID == 2){
+				Unselect(fid, bc, toSelect, viewer);
+			}
+			else {
+				return false;
+			}
+			return true;
+		}
+		return false;
+	}
+
+	void Unselect(int fid, Eigen::Vector3f& bc, std::set<int>& toSelect, igl::opengl::glfw::Viewer& viewer) {
+		if (toSelect.find(fid) != toSelect.end()) {
+			toSelect.erase(fid);
+			//repaint
+			if (handleSelectionMode) {
+				viewer.data().clear_points();
+				set<int>::iterator itr;
+				for (itr = handles.begin(); itr != handles.end(); itr++) {
+					viewer.data().add_points(vertices.row(*itr), Eigen::RowVector3d(0, 1, 0));
+				}
+			}
+			else {
+				UpdateColor(fid, Eigen::Vector3d(1, 1, 1), viewer);
+			}
+		}
+	}
+
+	void Select(int fid, Eigen::Vector3f& bc, std::set<int>& toSelect, igl::opengl::glfw::Viewer& viewer)
 	{
-		auto& faces = handleSelectionMode ? faceHandles : staticFaces;
 		auto newColor = handleSelectionMode ? Vector3d(0, 1, 0) : Vector3d(1, 0, 0);
 
 		if (handleSelectionMode) {
-			int selectedVertex = GetClosestVertexIdFromBC(fid, bc);
-			std::cout << selectedVertex << std::endl;
+			int selectedVertex = fid;//GetClosestVertexIdFromBC(fid, bc);
+			toSelect.insert(selectedVertex);
 			viewer.data().add_points(vertices.row(selectedVertex), Eigen::RowVector3d(0,1,0));
+			//checks that vertex is hit
+			vertexHit = true;
 		}
 		else {
 			//static faces are defined
-			if (faces.find(fid) == faces.end()) {
+			if (toSelect.find(fid) == toSelect.end()) {
 				//select face
-				faces.insert(fid);
+				toSelect.insert(fid);
 				UpdateColor(fid, newColor, viewer);
 				//std::cout << fid << std::endl;
 			}
+			/*
 			else {
 				//unselect face
-				faces.erase(fid);
+				toSelect.erase(fid);
 				UpdateColor(fid, Eigen::Vector3d(1, 1, 1), viewer);
 			}
-
+			
 			//remove from other set if necessary, a handle cannot be static and a static face cannot be a handle
-			auto& otherFaces = handleSelectionMode ? staticFaces : faceHandles;
+			auto& otherFaces = handleSelectionMode ? staticFaces : handles;
 			if (otherFaces.find(fid) != otherFaces.end()) {
 				otherFaces.erase(fid);
 				//std::cout << "erased face " + std::to_string(fid) + " from " + (handleSelectionMode ? "staticFaces" : "faceHandles") << std::endl;
 			}
+			*/
 		}
-		return true;
 	}
 
 	
