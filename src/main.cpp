@@ -26,7 +26,7 @@ int main() {
 	fixedPoints.push_back(2);
 	fixedPoints.push_back(7);
 	int handleID = 0;
-	Vector3f handleMoved(0, 0, 2);
+	Vector3f handleMoved(0, 0, 1);
 
 
 	SimpleMesh sourceMesh;

@@ -37,7 +37,7 @@ void estimateRotation(SimpleMesh *mesh, int vertexID) {
         cout<< D << endl;
         cout<< " "<<endl;
 
-		JacobiSVD<MatrixXf> svd(P * D * PPrime.transpose(), ComputeFullU | ComputeFullV);
+		JacobiSVD<MatrixXf> svd(P * D * PPrime.transpose(), ComputeThinU | ComputeThinV);
 
 		rotation = svd.matrixV().transpose() * svd.matrixU();
 
@@ -77,22 +77,16 @@ Vector3f calculateB(SimpleMesh *mesh, int i){
 
 void estimateVertices(SimpleMesh *mesh){
     MatrixXf b = MatrixXf::Zero(mesh->getNumberOfVertices(), 3);
-    // MatrixXf b = MatrixXf::Zero(mesh->getNumberOfVertices()+ mesh->getNumberOfFixedVertices(), 3);
     for ( int i = 0; i< mesh->getNumberOfVertices(); ++i)
     {
         b.row(i) = calculateB(mesh, i);
     }
-    // vector<int> fixedVertices = mesh->getFixedVertices();
-    // for(int i=0; i< mesh->getNumberOfFixedVertices(); ++i){
-    //     int fixedVertex = fixedVertices[i];
-    //     b.row(mesh->getNumberOfVertices()+i) = mesh->getVertexForFillingB(fixedVertex);
-    // }
 
     cout<<"b: \n"<<b<<endl;
-    cout<<"Laplacian: \n"<<mesh->getLaplaceMatrix()<<endl;
+    cout<<"Laplacian: \n"<<mesh->getSystemMatrix()<<endl;
     //Solve LES with Cholesky, L positive definite // TODO test sparse cholesky on sparse eigen matrices
     cout<<"Solving LES ..." <<endl;
-    MatrixXf PPrime = mesh->getLaplaceMatrix().ldlt().solve(b);
+    MatrixXf PPrime = mesh->getSystemMatrix().colPivHouseholderQr().solve(b);
     cout<<"Done!"<<endl;
     cout<<"PPrime Result:" <<endl;
     cout<<PPrime<<endl;
@@ -128,6 +122,7 @@ void applyDeformation(SimpleMesh *mesh, int handleID, Vector3f handleNewPosition
 
         //TODO Initial guess for pprime ?
 
+        // estimateVertices(mesh);
         for(int i=0; i< mesh->getNumberOfVertices(); ++i){
             estimateRotation(mesh, i);
         }
