@@ -57,27 +57,39 @@ Vector3f calculateB(SimpleMesh *mesh, int i){
     vector<int> neighbors = mesh->getNeighborsOf(i);
     int numNeighbors = neighbors.size();
     Vector3f b = Vector3f::Zero();
-    cout<<"calculateB() for "<<i<<endl;
+    if(mesh->isInFixedVertices(i)){
+        if(mesh->isHandle(i)){
+            b = mesh->getHandleNewPosition();
+        }
+        else{
+            b = mesh->getVertex(i);
+        }
+    }
+    else{
+    
     for ( int neighborID : neighbors)
     {
         b += mesh->getWeight(i, neighborID) * 0.5 * (mesh->getRotation(i)+ mesh->getRotation(neighborID))*(mesh->getVertex(i) - mesh->getVertex(neighborID));
+    }
     }
     return b;
 }
 
 void estimateVertices(SimpleMesh *mesh){
-    MatrixXf b = MatrixXf::Zero(mesh->getNumberOfVertices()+ mesh->getNumberOfFixedVertices(), 3);
+    MatrixXf b = MatrixXf::Zero(mesh->getNumberOfVertices(), 3);
+    // MatrixXf b = MatrixXf::Zero(mesh->getNumberOfVertices()+ mesh->getNumberOfFixedVertices(), 3);
     for ( int i = 0; i< mesh->getNumberOfVertices(); ++i)
     {
         b.row(i) = calculateB(mesh, i);
     }
-    vector<int> fixedVertices = mesh->getFixedVertices();
-    for(int i=0; i< mesh->getNumberOfFixedVertices(); ++i){
-        int fixedVertex = fixedVertices[i];
-        b.row(mesh->getNumberOfVertices()+i) = mesh->getVertexForFillingB(fixedVertex);
-    }
+    // vector<int> fixedVertices = mesh->getFixedVertices();
+    // for(int i=0; i< mesh->getNumberOfFixedVertices(); ++i){
+    //     int fixedVertex = fixedVertices[i];
+    //     b.row(mesh->getNumberOfVertices()+i) = mesh->getVertexForFillingB(fixedVertex);
+    // }
 
     cout<<"b: \n"<<b<<endl;
+    cout<<"Laplacian: \n"<<mesh->getLaplaceMatrix()<<endl;
     //Solve LES with Cholesky, L positive definite // TODO test sparse cholesky on sparse eigen matrices
     cout<<"Solving LES ..." <<endl;
     MatrixXf PPrime = mesh->getLaplaceMatrix().ldlt().solve(b);
@@ -97,8 +109,7 @@ float calculateEnergy(SimpleMesh *mesh){ // TODO: not sure if implemented energy
         for ( int j : neighbors)
         {
             Vector3f v= ((mesh->getDeformedVertex(i) - mesh->getDeformedVertex(j)) - mesh->getRotation(i) * (mesh->getVertex(i) - mesh->getVertex(j))); 
-            cell_energy +=  (v[0]*v[0] + v[1]*v[1]+v[2]*v[2]);
-            // cell_energy += mesh->getWeight(i,j) * (v[0]*v[0] + v[1]*v[1]+v[2]*v[2]);
+            cell_energy += mesh->getWeight(i,j) * (v[0]*v[0] + v[1]*v[1]+v[2]*v[2]);
         } 
         energy+=cell_energy;
     }

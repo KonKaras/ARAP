@@ -284,12 +284,6 @@ public:
 		cout << "Edgematrix: " << m_edgeMatrix <<endl;
 		cout << "Adjacencymatrix: " << m_neighborMatrix <<endl;
 
-		cout << "GetNeighborsOf(0): "<<endl;
-		vector<int> n = getNeighborsOf(0);
-		for(int i: n){
-			cout<<i<<endl;
-		} 
-
 		// cout << m_edgeMatrix.rows() << " - " << m_edgeMatrix.cols()<< endl;
 		// cout << m_neighborMatrix.rows() << " - " << m_neighborMatrix.cols()<< endl;
 
@@ -469,14 +463,23 @@ public:
 	}
 	
 	double angleBetweenVectors(Vector3f a, Vector3f b) {
-		// Vector3f a3(a.x(), a.y(), a.z());
-		// Vector3f b3(b.x(), b.y(), b.z());
-		// cout<< "here. " << acos((a3).dot(b3)/(a3.norm()*b3.norm()))*180 / M_PI <<endl;
 		return acos((a).dot(b)/(a.norm()*b.norm()))*180 / M_PI;
 	}
 
 	vector<int> getFixedVertices(){
 		return m_fixedVertices;
+	}
+
+	bool isInFixedVertices(int i){
+		return std::find(m_fixedVertices.begin(), m_fixedVertices.end(), i) != m_fixedVertices.end();
+	}
+
+	bool isHandle(int i){
+		return i == m_handleID;
+	}
+
+	Vector3f getHandleNewPosition(){
+		return m_newHandlePosition;
 	}
 
     float computeWeightForPair(int i, int j){
@@ -502,6 +505,7 @@ public:
             Vertex vertex_o = m_vertices[other_vertex_id];
 
             float theta = angleBetweenVectors(vertex_i.position - vertex_o.position, vertex_j.position - vertex_o.position); //TODO is this correct???
+			// cout<<"Theta for i "<<i<<" and j "<<j<<" and other v "<<other_vertex_id<<" = "<<theta<<endl;
             cot_theta_sum += (1 / tan(theta));
 		}
             
@@ -509,28 +513,32 @@ public:
 	}
 
 	void calculateLaplaceMatrix(){ 
-        
         m_laplaceMatrix = m_weightSum + m_weightMatrix; // TODO not sure if correct
-        int num_fixedVertices = m_fixedVertices.size();
+        // int num_fixedVertices = m_fixedVertices.size();
 
-        int n = m_numV + num_fixedVertices; //for each fixed vertice, add a new row and col
-		cout << "Calculation Laplacian Matrix of size ("<<n<<","<<n<<")"<<endl;
-        MatrixXf m = MatrixXf::Zero(n,n); 
+        // int n = m_numV + num_fixedVertices; //for each fixed vertice, add a new row and col
+		// cout << "Calculation Laplacian Matrix of size ("<<n<<","<<n<<")"<<endl;
+        // MatrixXf m = MatrixXf::Zero(n,n); 
         
-		for(int i=0;i<m_numV;i++){ // Eigen::block() not with non constant vars
-			for(int j=0;j<m_numV;j++){
-				m(i,j) = m_laplaceMatrix(i,j);
-			}
-		}
+		// for(int i=0;i<m_numV;i++){ // Eigen::block() not with non constant vars
+		// 	for(int j=0;j<m_numV;j++){
+		// 		m(i,j) = m_laplaceMatrix(i,j);
+		// 	}
+		// }
         
 		// Add 1s in the row and column associated with the fixed point to constain it -> adding constraint per fixed point to LES
         // This will increase L by the size of fixed_verts
-        for (int i =0; i< num_fixedVertices; ++i){
-			m(m_numV +i, m_fixedVertices[i]) = 1;
-			m( m_fixedVertices[i], m_numV +i) = 1;
+        // for (int i =0; i< num_fixedVertices; ++i){
+		// 	m(m_numV +i, m_fixedVertices[i]) = 1;
+		// 	m( m_fixedVertices[i], m_numV +i) = 1;
+		// }
+
+		for (int i : m_fixedVertices){
+			m_laplaceMatrix.row(i).setZero();
+			m_laplaceMatrix(i, i) = 1;
 		}
 
-        m_laplaceMatrix = m;
+        // m_laplaceMatrix = m;
 	}
 
 	// void computeDistances(){
