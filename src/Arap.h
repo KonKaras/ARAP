@@ -13,7 +13,7 @@ void estimateRotation(SimpleMesh *mesh, int vertexID) {
         vector<int> neighbors = mesh->getNeighborsOf(vertexID);
         int numNeighbors = neighbors.size();
 
-		// MatrixXf P = MatrixXf::Zero(3, numNeighbors);
+		// MatrixXf P = MatrixXf::Zero(3, numNeighbors); P precomputed
 		MatrixXf PPrime =MatrixXf::Zero(3, numNeighbors);
         MatrixXf D = MatrixXf::Zero(numNeighbors, numNeighbors);
 
@@ -39,14 +39,14 @@ void estimateRotation(SimpleMesh *mesh, int vertexID) {
 
 		JacobiSVD<MatrixXf> svd(P * D * PPrime.transpose(), ComputeFullU | ComputeFullV);
 
-		rotation = svd.matrixV() * svd.matrixU().transpose();
+		rotation = svd.matrixV().transpose() * svd.matrixU();
 
 		if(rotation.determinant() == -1)
 		{
             MatrixXf svd_u = svd.matrixU();
             svd_u.rightCols(1) = svd_u.rightCols(1) * -1; 
 			//rotation = svd.matrixV() * Matrix3f::Identity() * Vector3f(1,1,-1) * svd.matrixU().transpose();
-			rotation = svd.matrixV() * svd_u.transpose();
+			rotation = svd.matrixV().transpose() * svd_u;
 		}
         cout<< rotation << endl;
 
@@ -97,16 +97,18 @@ float calculateEnergy(SimpleMesh *mesh){ // TODO: not sure if implemented energy
         for ( int j : neighbors)
         {
             Vector3f v= ((mesh->getDeformedVertex(i) - mesh->getDeformedVertex(j)) - mesh->getRotation(i) * (mesh->getVertex(i) - mesh->getVertex(j))); 
-            cell_energy += mesh->getWeight(i,j) * pow(v[0]*v[0] + v[1]*v[1]+v[2]*v[2], 2);
+            cell_energy +=  (v[0]*v[0] + v[1]*v[1]+v[2]*v[2]);
+            // cell_energy += mesh->getWeight(i,j) * (v[0]*v[0] + v[1]*v[1]+v[2]*v[2]);
         } 
         energy+=cell_energy;
     }
     return energy;
 }
 
-void applyDeformation(SimpleMesh *mesh, int handleID, Vector4f handleNewPosition, int iterations){
+void applyDeformation(SimpleMesh *mesh, int handleID, Vector3f handleNewPosition, int iterations){
     mesh->setNewHandlePosition(handleNewPosition);
     mesh->printPs();
+    mesh->printNewHandlePosition();
     float energy=0.0f;
     int iter=0;
     cout<<"Applying deformation for handle with ID " << handleID << " to new position " << handleNewPosition.x() <<","<< handleNewPosition.y()<< ","<< handleNewPosition.z()<<endl;
