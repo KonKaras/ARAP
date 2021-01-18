@@ -8,7 +8,6 @@ using namespace std;
 
 struct Vertex {
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-
 	// Position stored as 3 floats
 	Vector3f position;
 	// Color stored as 4 unsigned char
@@ -95,11 +94,11 @@ public:
 			m_fixedVertices.push_back(f);
 		}
 
-		//Handle is last fixed Vertex
+		//Handle is last fixed Vertex. Handle darf sich auch nicht bewegen, da er ja eine fixe zielposition zugewiesen bekommen hat
 		m_fixedVertices.push_back(handle);
 		m_handleID = handle;
 
-		cout << m_fixedVertices.size() << " in m_fixedVertices" <<endl;
+		// cout << m_fixedVertices.size() << " in m_fixedVertices" <<endl;
 
 		// Read vertices.
 		if (std::string(string1).compare("COFF") == 0) {
@@ -107,7 +106,6 @@ public:
 			for (unsigned int i = 0; i < numV; i++) {
 				Vertex v;
 				file >> v.position.x() >> v.position.y() >> v.position.z();
-				// v.position.w() = 1.f;
 
 				// Colors are stored as integers. We need to convert them.
 				Vector4i colorInt;
@@ -122,7 +120,6 @@ public:
 			for (unsigned int i = 0; i < numV; i++) {
 				Vertex v;
 				file >> v.position.x() >> v.position.y() >> v.position.z();
-				// v.position.w() = 1.f;
 
 				v.color.x() = 0;
 				v.color.y() = 0;
@@ -138,11 +135,12 @@ public:
 			return false;
 		}
 
-		m_neighborMatrix = MatrixXf::Zero(m_numV, m_numV);
-		m_verticesToFaces = std::vector<std::vector<unsigned int>>(m_numV); //vtf[i] contains faces that contain vertex ID i
-        m_cellRotations = std::vector<MatrixXf>(m_numV); // list of Rs per fan
-		m_precomputedPMatrices = vector<MatrixXf>(m_numV);
-		m_edgeMatrix = MatrixXf::Zero(m_numV,m_numV); //Diagonal how many edges from vertex out
+		//Speicherallokation der wichtigen Matrizen und Listen
+		m_neighborMatrix = MatrixXf::Zero(m_numV, m_numV); // Element (i,j)=1, wenn i und j nachbarb, sonst 0
+		m_verticesToFaces = std::vector<std::vector<unsigned int>>(m_numV); //vtf[i] contains the face IDs that contain vertex ID i
+        m_cellRotations = std::vector<MatrixXf>(m_numV); // eine rotationsmatrix pro vertex
+		m_precomputedPMatrices = vector<MatrixXf>(m_numV); // Vorberechnung der P matrix (paper seite 4 anfang)
+		m_edgeMatrix = MatrixXf::Zero(m_numV,m_numV); //Diagonal how many edges from vertex out --> vllt unnötig TODO
 		m_triangles = vector<Triangle>(numP);
 
 		// Read faces (i.e. triangles).
@@ -172,19 +170,19 @@ public:
 		cout << "numFaces: "<<numP<<endl;
 		cout << "numEdges: "<<numE<<endl;
 
-		cout << "Edgematrix: " << m_edgeMatrix <<endl;
-		cout << "Adjacencymatrix: " << m_neighborMatrix <<endl;
+		// cout << "Edgematrix: " << m_edgeMatrix <<endl;
+		// cout << "Adjacencymatrix: " << m_neighborMatrix <<endl;
 
 		// cout << m_edgeMatrix.rows() << " - " << m_edgeMatrix.cols()<< endl;
 		// cout << m_neighborMatrix.rows() << " - " << m_neighborMatrix.cols()<< endl;
 
-		buildWeightMatrix();
+		buildWeightMatrix(); // Die weights werden hier vorberechnet
 
-		cout << "m_weightmatrix: " << m_weightMatrix <<endl;
-		cout << "m_weightSum: " << m_weightSum <<endl;
+		// cout << "m_weightmatrix: " << m_weightMatrix <<endl;
+		// cout << "m_weightSum: " << m_weightSum <<endl;
 		// computeDistances();
-		calculateSystemMatrix();
-		precomputePMatrix();
+		calculateSystemMatrix(); // Die Matrix L (paper seite 5 anfang) wird hier berechnet, also die linke seite des LGS. Siehe auch gegebenen ARAP code.
+		precomputePMatrix(); // Die P matrix (seite 4 anfang) wird berechnet
 
 		return true;
 	}
@@ -207,7 +205,7 @@ public:
 		}
 	}
 
-	//Precompute P_i s for the arap estimateRotations() function
+	//Precompute P_i s for the arap estimateRotations() function (page 4 beginning)
 	void precomputePMatrix(){
 		
 		for(int i=0; i< m_numV;i++){
@@ -236,12 +234,14 @@ public:
         m_neighborMatrix(v3, v2) = 1;
 	}
 
+	//retrun true if both i and j are part of face f
 	bool partOfFace(int i, int j, Triangle f){
 		return (f.idx0 ==i && (f.idx1==j || f.idx2==j)) ||
 				(f.idx1 ==i && (f.idx0==j || f.idx2==j)) ||
 				(f.idx2 ==i && (f.idx1==j || f.idx0==j)) ;
 	}
 
+	//return list of all neighbors of vertex i
 	vector<int> getNeighborsOf(int vertId){
         vector<int> neighbors;
         for(int i=0; i<m_numV; i++){
@@ -253,11 +253,11 @@ public:
 
 	Vector3f getVertex(int i){
 		return m_vertices[i].position;
-		// return Vector3f(m_vertices[i].position.x(),m_vertices[i].position.y(),m_vertices[i].position.z());
 	}
 
-	// When filling the B vector the new handle position is needed, however for other functions the old position is needed which is 
-	// Why we have the two functions getVertex() and getVertexForFillingB()
+	// When filling the B vector the new handle position is needed, however for other vertices their original position is needed which is 
+	// Why we have the two functions getVertex() and getVertexForFillingB(), which differs between handle and not handle
+	//TODO might not be correct to fill row of handle in b vector this way...
 	Vector3f getVertexForFillingB(int i){ 
 		if(i==m_handleID)
 			return m_newHandlePosition;
@@ -380,8 +380,6 @@ public:
             if(partOfFace(i,j,f)) //If the face contains both I and J, add it
                 localFaces.push_back(f);
 		}
-            
-
         // Either a normal face or a boundry edge, otherwise bad mesh
         assert(localFaces.size() <= 2);
 
@@ -403,13 +401,17 @@ public:
         return cot_theta_sum * 0.5;
 	}
 
+	//TODO evtl liegt hier der fehler, systemmatrix L paper S.5 
 	void calculateSystemMatrix(){ 
 
 		m_systemMatrix = MatrixXf::Zero(m_numV, m_numV);
 		for(int i=0;i<m_numV;i++){
+			m_systemMatrix(i,i) = 0.0f;
 			for(int j =0;j<m_numV; j++){
-				m_systemMatrix(i,i) = m_weightMatrix(i,j);
-				m_systemMatrix(i,j) = -m_weightMatrix(i,j);
+				// m_systemMatrix(i,i) += m_weightMatrix(i,j);
+				// m_systemMatrix(i,j) = -m_weightMatrix(i,j);
+				m_systemMatrix(i,i) += 1.0f; // ?????
+				m_systemMatrix(i,j) = -1.0f;
 			}
 		}
 

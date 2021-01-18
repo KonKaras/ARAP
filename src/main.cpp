@@ -12,36 +12,44 @@ using namespace std;
 
 
 int main() {
+	/***
+	 *  SimpleMesh.m_vertices -> original positions
+	 *  SimpleMesh.m_verticesPrime -> computed new position in deformed mesh
+	 * 	ARAP.deform -> estimateVertices() löst das LGS Lx=b, wobei L=SimpleMesh.m_systemMatrix, x=pprime, b=b im code
+	 * 
+	 * 	test.off
+	 * 	0--1--2--3--4  --> y
+	 *  | /| /| /| /|
+	 * 	5--6--7--8--9
+	 * 	
+	 * 	|
+	 *  x
+	 * 
+	 ***/
+
 	// Load the source and target mesh.
 	const std::string filenameMesh = std::string("../../data/bunny/test.off");
 
-	vector<int> fixedPoints;
-	// fixedPoints.push_back(6); 
-	// fixedPoints.push_back(7); 
-	// fixedPoints.push_back(8);  
-
-	// int handleID = 140; // left ear
-	// Vector4f handleMoved(2*0.037177, 2*0.110644, 2*0.018811, 1); // left ear moved to new position (2*original position)
-
+	vector<int> fixedPoints; //hier sammeln wir die vertices die sich nciht bewegen durfen
 	fixedPoints.push_back(2);
 	fixedPoints.push_back(7);
 	int handleID = 0;
-	Vector3f handleMoved(0, 0, 1);
+	Vector3f handleMoved(0, 0, 1); // Zum testen: vertex 0 soll einfach nur um eins nach oben gehoben werden
 
 
 	SimpleMesh sourceMesh;
-	if (!sourceMesh.loadMesh(filenameMesh, fixedPoints, handleID)) {
+	if (!sourceMesh.loadMesh(filenameMesh, fixedPoints, handleID)) { // in loadMesh() finden wichtige vorberechnungen statt
 		std::cout << "Mesh file wasn't read successfully at location: " << filenameMesh << std::endl;
 		return -1;
 	}
 
 	auto t1 = std::chrono::high_resolution_clock::now();
-	applyDeformation(&sourceMesh, handleID, handleMoved, 1);
+	applyDeformation(&sourceMesh, handleID, handleMoved, 3); // Hier passiert die flipflop optimization mit 3 iterationen
 	auto t2 = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<float> eps = t2 - t1;
 	std::cout << "Deformation completed in "<< eps.count() <<" seconds." << std::endl;
 
-	sourceMesh.writeMesh("../../data/bunny/deformedMesh.off");
+	sourceMesh.writeMesh("../../data/bunny/deformedMesh.off"); 
 
 	return 0;
 }
