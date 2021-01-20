@@ -66,21 +66,7 @@ private:
 			if (!arapMode) {
 				currentMouseButton = button;
 				mouseDown = true;
-				/*
-				int fid;
-				Eigen::Vector3f bc;
-				// Cast a ray in the view direction starting from the mouse position
-				double x = viewer.current_mouse_x;
-				double y = viewer.core().viewport(3) - viewer.current_mouse_y;
-				if (igl::unproject_onto_mesh(Eigen::Vector2f(x, y), viewer.core().view,
-					viewer.core().proj, viewer.core().viewport, vertices, faces, fid, bc))
-				{
-					vertexHit = true;
-					ClickerHandler(fid, bc, viewer);
-					return true;
-				}
-				return false;
-				*/
+
 				return SelectionHandler(viewer, button);
 			}
 			else {
@@ -98,7 +84,7 @@ private:
 				{
 					vertexHit = true;
 					int handleId = GetClosestVertexIdFromBC(fid, bc);
-					if (handles.find(handleId) == handles.end()) {
+					if (handles.find(handleId) != handles.end()) {
 						currentMovingHandle = handleId;
 						return DisplacementHandler(viewer);
 					}
@@ -120,19 +106,7 @@ private:
 		{
 			//checks if mouse key is pressed + we are not in arap mode + have selected a vertex with the mouse key press
 			if (mouseDown && vertexHit) {
-				/*
-				int fid;
-				Eigen::Vector3f bc;
-				// Cast a ray in the view direction starting from the mouse position
-				double x = viewer.current_mouse_x;
-				double y = viewer.core().viewport(3) - viewer.current_mouse_y;
-				if (igl::unproject_onto_mesh(Eigen::Vector2f(x, y), viewer.core().view,
-					viewer.core().proj, viewer.core().viewport, vertices, faces, fid, bc))
-				{
-					ClickerHandler(fid, bc, viewer);
-					return true;
-				}
-				*/
+
 				if (!arapMode) {
 					return SelectionHandler(viewer, currentMouseButton);
 				}
@@ -193,22 +167,17 @@ private:
 	}
 
 	bool DisplacementHandler(igl::opengl::glfw::Viewer& viewer) {
-		int fid;
-		Eigen::Vector3f bc;
-
 		double x = viewer.current_mouse_x;
 		double y = viewer.core().viewport(3) - viewer.current_mouse_y;
 
-		//Transform mouse pos into world pos
-		Eigen::Vector2d mousePos = 1 / vertices.row(currentMovingHandle).z() * Eigen::Vector2d(x,y);
-		//Eigen::Matrix4d projection = viewer.
-		Eigen::Vector3d worldPos = igl::unproject(Eigen::Vector3d(x, y, 1 / vertices.row(currentMovingHandle).z()), viewer.core().view, viewer.core().proj, viewer.core().viewport);
+		//Convert mouse position into world position
+		Eigen::Vector3d worldPos = igl::unproject(Eigen::Vector3f(x, y, vertices.row(currentMovingHandle).z()), viewer.core().view, viewer.core().proj, viewer.core().viewport).cast<double>();
 
-		Eigen::Vector3d diff = vertices.row(currentMovingHandle) - Eigen::Vector3d(x, y, vertices.row(currentMovingHandle).z()).transpose();
-		vertices.row(currentMovingHandle) += diff;
+		vertices.row(currentMovingHandle) = worldPos.transpose();//+= diff;
 
 		//TODO Send Data to ARAP
 		//ARAP does stuff
+
 		//repaint
 		viewer.data().set_mesh(vertices, faces);
 		return true;
