@@ -34,7 +34,7 @@ private:
 	bool vertexHit = false;
 
 	int currentMouseButton = 0;
-	int currentMovingHandle = 0;
+	int currentMovingHandle = -1;
 
 	Eigen::MatrixXd vertices, colors;
 	Eigen::MatrixXi faces;
@@ -99,6 +99,7 @@ private:
 				mouseDown = false;
 				vertexHit = false;
 			}
+			currentMovingHandle = -1;
 			return false;
 		};
 
@@ -169,14 +170,17 @@ private:
 	bool DisplacementHandler(igl::opengl::glfw::Viewer& viewer) {
 		double x = viewer.current_mouse_x;
 		double y = viewer.core().viewport(3) - viewer.current_mouse_y;
+		
+		Eigen::Vector3f handlePos = vertices.row(currentMovingHandle).cast<float>();
+		//Convert depth to view
+		Eigen::Vector3d projection = igl::project(handlePos, viewer.core().view, viewer.core().proj, viewer.core().viewport).cast<double>();
 
 		//Convert mouse position into world position
-		Eigen::Vector3d worldPos = igl::unproject(Eigen::Vector3f(x, y, vertices.row(currentMovingHandle).z()), viewer.core().view, viewer.core().proj, viewer.core().viewport).cast<double>();
+		Eigen::Vector3d worldPos = igl::unproject(Eigen::Vector3f(x, y, (float)projection.z()), viewer.core().view, viewer.core().proj, viewer.core().viewport).cast<double>();
 
 		vertices.row(currentMovingHandle) = worldPos.transpose();//+= diff;
 
 		//TODO Send Data to ARAP
-		//ARAP does stuff
 
 		//repaint
 		viewer.data().set_mesh(vertices, faces);
