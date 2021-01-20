@@ -31,6 +31,7 @@ private:
 	bool arapMode = false;
 	bool handleSelectionMode = false;
 	bool mouseDown = false;
+	bool handleDown = false;
 	bool vertexHit = false;
 
 	int currentMouseButton = 0;
@@ -85,6 +86,7 @@ private:
 					vertexHit = true;
 					int handleId = GetClosestVertexIdFromBC(fid, bc);
 					if (handles.find(handleId) != handles.end()) {
+						handleDown = true;
 						currentMovingHandle = handleId;
 						return DisplacementHandler(viewer);
 					}
@@ -98,8 +100,9 @@ private:
 			if (button == currentMouseButton) {
 				mouseDown = false;
 				vertexHit = false;
+				currentMovingHandle = -1;
+				handleDown = false;
 			}
-			currentMovingHandle = -1;
 			return false;
 		};
 
@@ -112,7 +115,9 @@ private:
 					return SelectionHandler(viewer, currentMouseButton);
 				}
 				else {
-					return DisplacementHandler(viewer);
+					if (handleDown) {
+						return DisplacementHandler(viewer);
+					}
 				}
 			}
 			return false;
