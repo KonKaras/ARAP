@@ -37,7 +37,7 @@ private:
 	int currentMouseButton = 0;
 	int currentMovingHandle = -1;
 
-	Eigen::MatrixXd vertices, colors;
+	Eigen::MatrixXd vertices, colors, handleRep;
 	Eigen::MatrixXi faces;
 
 	//https://github.com/libigl/libigl/blob/master/tutorial/708_Picking/main.cpp
@@ -88,6 +88,7 @@ private:
 					if (handles.find(handleId) != handles.end()) {
 						handleDown = true;
 						currentMovingHandle = handleId;
+						viewer.data().clear_points();
 						return DisplacementHandler(viewer);
 					}
 				}
@@ -98,6 +99,12 @@ private:
 		viewer.callback_mouse_up = [this](igl::opengl::glfw::Viewer& viewer, int button, int) -> bool
 		{
 			if (button == currentMouseButton) {
+				if (arapMode && handleDown) {
+					set<int>::iterator itr;
+					for (itr = handles.begin(); itr != handles.end(); itr++) {
+						viewer.data().add_points(vertices.row(*itr), Eigen::RowVector3d(0, 1, 0));
+					}
+				}
 				mouseDown = false;
 				vertexHit = false;
 				currentMovingHandle = -1;
