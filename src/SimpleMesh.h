@@ -408,10 +408,10 @@ public:
 		for(int i=0;i<m_numV;i++){
 			m_systemMatrix(i,i) = 0.0f;
 			for(int j =0;j<m_numV; j++){
-				// m_systemMatrix(i,i) += m_weightMatrix(i,j);
-				// m_systemMatrix(i,j) = -m_weightMatrix(i,j);
-				m_systemMatrix(i,i) += 1.0f; // ?????
-				m_systemMatrix(i,j) = -1.0f;
+				m_systemMatrix(i,i) += m_weightMatrix(i,j);
+				m_systemMatrix(i,j) = -m_weightMatrix(i,j);
+				// m_systemMatrix(i,i) += 1.0f; // ?????
+				// m_systemMatrix(i,j) = -1.0f;
 			}
 		}
 

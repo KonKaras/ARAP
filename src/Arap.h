@@ -99,7 +99,7 @@ float calculateEnergy(SimpleMesh *mesh){ // TODO not sure if implemented energy 
         for ( int j : neighbors)
         {
             Vector3f v= ((mesh->getDeformedVertex(i) - mesh->getDeformedVertex(j)) - mesh->getRotation(i) * (mesh->getVertex(i) - mesh->getVertex(j))); 
-            cell_energy += mesh->getWeight(i,j) * (v[0]*v[0] + v[1]*v[1]+v[2]*v[2]);
+            cell_energy += mesh->getWeight(i,j) * v.norm();
         } 
         energy+=cell_energy;
     }
@@ -124,12 +124,12 @@ void applyDeformation(SimpleMesh *mesh, int handleID, Vector3f handleNewPosition
         float energy_i = calculateEnergy(mesh);        
         cout<< "Iteration: "<< iter<< "  Local error: "<< energy_i << endl;
 
-        // mesh->copyPPrime(); // write new vertice locations as current locations in mesh (PPrime -> P)
+        mesh->copyPPrime(); // write new vertice locations as current locations in mesh (PPrime -> P)
 
         energy = energy_i;
         iter++;
     }
-    mesh->copyPPrime();
+    mesh->copyPPrime(); // write new vertice locations as current locations in mesh (PPrime -> P)
     cout << "Resulting energy: "<< energy<< endl; //TODO energy getting bigger rather than smaller :/
     cout << "PPrime[handleID] is "<< mesh->getDeformedVertex(handleID).x() <<","<< mesh->getDeformedVertex(handleID).y()<< ","<< mesh->getDeformedVertex(handleID).z()<<endl;
     // assert(mesh.getDeformedVertex(handleID).x() == handleNewPosition.x());
