@@ -30,6 +30,7 @@ struct Triangle {
 class SimpleMesh {
 public:
 	SimpleMesh() {}
+	MatrixXf m_b;
 
 	void clear() {
 		m_vertices.clear();
@@ -65,7 +66,7 @@ public:
 		return m_triangles;
 	}
 
-	bool loadMesh(const std::string& filename, vector<int> fixedPoints, int handle) {
+	bool loadMesh(const std::string& filename, int handle) {
 		// Read off file (Important: Only .off files are supported).
 		m_vertices.clear();
 		m_verticesPrime.clear();
@@ -89,10 +90,10 @@ public:
 
 		m_numV = numV;
 
-		// Fixed vertices
-		for(int f : fixedPoints){
-			m_fixedVertices.push_back(f);
-		}
+		// // Fixed vertices
+		// for(int f : fixedPoints){
+		// 	m_fixedVertices.push_back(f);
+		// }
 
 		//Handle is last fixed Vertex. Handle darf sich auch nicht bewegen, da er ja eine fixe zielposition zugewiesen bekommen hat
 		m_fixedVertices.push_back(handle);
@@ -140,8 +141,8 @@ public:
 		m_verticesToFaces = std::vector<std::vector<unsigned int>>(m_numV); //vtf[i] contains the face IDs that contain vertex ID i
         m_cellRotations = std::vector<MatrixXf>(m_numV); // eine rotationsmatrix pro vertex
 		m_precomputedPMatrices = vector<MatrixXf>(m_numV); // Vorberechnung der P matrix (paper seite 4 anfang)
-		m_edgeMatrix = MatrixXf::Zero(m_numV,m_numV); //Diagonal how many edges from vertex out --> vllt unnötig TODO
 		m_triangles = vector<Triangle>(numP);
+		m_b = MatrixXf::Zero(m_numV, 3);
 
 		// Read faces (i.e. triangles).
 		for (unsigned int i = 0; i < numP; i++) {
@@ -162,7 +163,6 @@ public:
 		}
 
 		for(int i=0; i<numV;i++){
-		 	m_edgeMatrix(i,i) = (m_neighborMatrix.rowwise().sum())[i];
 			m_cellRotations[i] = MatrixXf::Zero(3,3);
 		}
 
@@ -170,10 +170,7 @@ public:
 		cout << "numFaces: "<<numP<<endl;
 		cout << "numEdges: "<<numE<<endl;
 
-		// cout << "Edgematrix: " << m_edgeMatrix <<endl;
 		// cout << "Adjacencymatrix: " << m_neighborMatrix <<endl;
-
-		// cout << m_edgeMatrix.rows() << " - " << m_edgeMatrix.cols()<< endl;
 		// cout << m_neighborMatrix.rows() << " - " << m_neighborMatrix.cols()<< endl;
 
 		buildWeightMatrix(); // Die weights werden hier vorberechnet
@@ -185,6 +182,18 @@ public:
 		precomputePMatrix(); // Die P matrix (seite 4 anfang) wird berechnet
 
 		return true;
+	}
+
+	void applyConstrainedPoints(int handleID, Vector3f handleNewPosition, vector<int> fixedPoints){
+		m_handleID = handleID;
+		Vertex v;
+		v.position = handleNewPosition;
+		m_verticesPrime[handleID] = v;
+
+		// Fixed vertices
+		for(int f : fixedPoints){
+			m_fixedVertices.push_back(f);
+		}
 	}
 
 	void printPs(){
@@ -294,9 +303,7 @@ public:
 			Vertex v;
 			v.position.x() = pprime(i,0);
 			v.position.y() = pprime(i,1);
-			v.position.z() = pprime(i,2);
-			// v.position.w() = 1;
-			
+			v.position.z() = pprime(i,2);			
 			m_verticesPrime[i] = v;
 		}
 	}
@@ -406,20 +413,20 @@ public:
 
 		m_systemMatrix = MatrixXf::Zero(m_numV, m_numV);
 		for(int i=0;i<m_numV;i++){
-			m_systemMatrix(i,i) = 0.0f;
+			// m_systemMatrix(i,i) = 0.0f;
 			for(int j =0;j<m_numV; j++){
-				m_systemMatrix(i,i) += m_weightMatrix(i,j);
-				m_systemMatrix(i,j) = -m_weightMatrix(i,j);
-				// m_systemMatrix(i,i) += 1.0f; // ?????
-				// m_systemMatrix(i,j) = -1.0f;
+				// m_systemMatrix(i,i) += m_weightMatrix(i,j);
+				// m_systemMatrix(i,j) = -m_weightMatrix(i,j);
+				m_systemMatrix(i,i) += 1.0f; // ?????
+				m_systemMatrix(i,j) = -1.0f;
 			}
 		}
 
-		for (int i : m_fixedVertices){
-			m_systemMatrix.row(i).setZero();
-			m_systemMatrix.col(i).setZero();
-			m_systemMatrix(i, i) = 1;
-		}
+		// for (int i : m_fixedVertices){
+		// 	m_systemMatrix.row(i).setZero();
+		// 	m_systemMatrix.col(i).setZero();
+		// 	m_systemMatrix(i, i) = 1;
+		// }
 
         
 	}
@@ -463,7 +470,6 @@ private:
 	vector<Triangle> m_triangles;
 	MatrixXf m_neighborMatrix;
 	vector<MatrixXf> m_cellRotations;
-	MatrixXf m_edgeMatrix;
 	MatrixXf m_systemMatrix;
 	vector<std::vector<unsigned int>> m_verticesToFaces;
 	MatrixXf m_weightMatrix, m_weightSum;

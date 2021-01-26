@@ -31,20 +31,27 @@ int main() {
 	const std::string filenameMesh = std::string("../../data/bunny/test.off");
 
 	vector<int> fixedPoints; //hier sammeln wir die vertices die sich nciht bewegen durfen
+	fixedPoints.push_back(0);
+	fixedPoints.push_back(1);
 	fixedPoints.push_back(2);
+	fixedPoints.push_back(3);
+	fixedPoints.push_back(5);
+	fixedPoints.push_back(6);
 	fixedPoints.push_back(7);
-	int handleID = 0;
-	Vector3f handleMoved(0, 0, 1); // Zum testen: vertex 0 soll einfach nur um eins nach oben gehoben werden
+	fixedPoints.push_back(8);
+	//fixedPoints.push_back(9);
+	int handleID = 4;
+	Vector3f handleMoved(0, 5, 0); // Zum testen: vertex 0 soll einfach nur um eins nach oben gehoben werden
 
 
 	SimpleMesh sourceMesh;
-	if (!sourceMesh.loadMesh(filenameMesh, fixedPoints, handleID)) { // in loadMesh() finden wichtige vorberechnungen statt
+	if (!sourceMesh.loadMesh(filenameMesh, handleID)) { // in loadMesh() finden wichtige vorberechnungen statt
 		std::cout << "Mesh file wasn't read successfully at location: " << filenameMesh << std::endl;
 		return -1;
 	}
 
 	auto t1 = std::chrono::high_resolution_clock::now();
-	applyDeformation(&sourceMesh, handleID, handleMoved, 3); // Hier passiert die flipflop optimization mit 3 iterationen
+	applyDeformation(&sourceMesh, handleID, handleMoved, fixedPoints, 3); // Hier passiert die flipflop optimization mit 3 iterationen
 	auto t2 = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<float> eps = t2 - t1;
 	std::cout << "Deformation completed in "<< eps.count() <<" seconds." << std::endl;
