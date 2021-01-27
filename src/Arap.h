@@ -78,6 +78,7 @@ void estimateVertices(SimpleMesh *mesh){
 			// mesh->m_b.row(i)[2] -= systemMatrix(i, fixedVertex) * mesh->getDeformedVertex(fixedVertex).z();
         }
 
+
         mesh->m_b.row(fixedVertex) = mesh->getDeformedVertex(fixedVertex);
         for (int i = 0; i < mesh->getNumberOfVertices(); ++i) systemMatrix(fixedVertex, i) = systemMatrix(i, fixedVertex) = 0.0f;
 		systemMatrix(fixedVertex, fixedVertex) = 1.0f;
@@ -105,7 +106,7 @@ void estimateVertices(SimpleMesh *mesh){
 
 float calculateEnergy(SimpleMesh *mesh){ // TODO not sure if implemented energy function correctly
     float energy= 0.0f;
-    for(int i=0; i<mesh->getNumberOfVertices(); ++i){
+    for(int i=0; i<mesh->getNumberOfVertices(); i++){
         vector<int> neighbors = mesh->getNeighborsOf(i);
         // int numNeighbors = neighbors.size();
         float cell_energy=0;
@@ -113,10 +114,11 @@ float calculateEnergy(SimpleMesh *mesh){ // TODO not sure if implemented energy 
         for ( int j : neighbors)
         {
             Vector3f v= ((mesh->getDeformedVertex(i) - mesh->getDeformedVertex(j)) - mesh->getRotation(i) * (mesh->getVertex(i) - mesh->getVertex(j))); 
-            cell_energy += v.norm();
+            cout << i << " " << j << " Vertex Distance " << (mesh->getDeformedVertex(i) - mesh->getDeformedVertex(j)).transpose() << " Rot diff: " << (mesh->getVertex(i) - mesh->getVertex(j)).transpose() << endl;
+            cell_energy = mesh->getWeight(i, j) * v.norm();
             // cell_energy += mesh->getWeight(i,j) * v.norm();
+            energy += cell_energy;
         } 
-        energy+=cell_energy;
     }
     return energy;
 }

@@ -28,20 +28,21 @@ int main() {
 	 ***/
 
 	// Load the source and target mesh.
-	const std::string filenameMesh = std::string("../../data/bunny/test.off");
+	const std::string filenameMesh = std::string("../data/bunny/test.off");
 
 	vector<int> fixedPoints; //hier sammeln wir die vertices die sich nciht bewegen durfen
 	fixedPoints.push_back(0);
-	fixedPoints.push_back(1);
+	//fixedPoints.push_back(1);
 	fixedPoints.push_back(2);
 	fixedPoints.push_back(3);
+	fixedPoints.push_back(4);
 	fixedPoints.push_back(5);
 	fixedPoints.push_back(6);
 	fixedPoints.push_back(7);
 	fixedPoints.push_back(8);
-	//fixedPoints.push_back(9);
-	int handleID = 4;
-	Vector3f handleMoved(0, 5, 0); // Zum testen: vertex 0 soll einfach nur um eins nach oben gehoben werden
+	fixedPoints.push_back(9);
+	int handleID = 2;
+	Vector3f handleMoved(-1, 2, 0); // Zum testen: vertex 0 soll einfach nur um eins nach oben gehoben werden
 
 
 	SimpleMesh sourceMesh;
@@ -56,7 +57,7 @@ int main() {
 	std::chrono::duration<float> eps = t2 - t1;
 	std::cout << "Deformation completed in "<< eps.count() <<" seconds." << std::endl;
 
-	sourceMesh.writeMesh("../../data/bunny/deformedMesh.off"); 
+	sourceMesh.writeMesh("../data/bunny/deformedMesh.off"); 
 
 	return 0;
 }
