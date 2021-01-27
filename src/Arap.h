@@ -130,7 +130,7 @@ void applyDeformation(SimpleMesh *mesh, int handleID, Vector3f handleNewPosition
     float energy=999.0f;
     int iter=0;
     cout<<"Applying deformation for handle with ID " << handleID << " to new position " << handleNewPosition.x() <<","<< handleNewPosition.y()<< ","<< handleNewPosition.z()<<endl;
-    while(iter < iterations && energy > THRESHOLD){
+    while(iter < iterations && abs(energy) > THRESHOLD){
         cout<<"[Iteration "<<iter<<"]"<<endl;
 
         for(int i=0; i< mesh->getNumberOfVertices(); ++i){
