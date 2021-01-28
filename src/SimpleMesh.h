@@ -27,6 +27,12 @@ struct Triangle {
 };
 
 
+struct Constraint {
+	int vertexID;
+	Vector3f position;
+};
+
+
 class SimpleMesh {
 public:
 	SimpleMesh() {}
@@ -90,16 +96,13 @@ public:
 
 		m_numV = numV;
 
-		// Fixed vertices
-		 for(int f : fixedPoints){
-		 	m_fixedVertices.push_back(f);
-		 }
+		// // Fixed vertices
+		//  for(int f : fixedPoints){
+		//  	m_fixedVertices.push_back(f);
+		//  }
 
 		//Handle is last fixed Vertex. Handle darf sich auch nicht bewegen, da er ja eine fixe zielposition zugewiesen bekommen hat
-		//m_fixedVertices.push_back(handle);
 		m_handleID = handle;
-
-		// cout << m_fixedVertices.size() << " in m_fixedVertices" <<endl;
 
 		// Read vertices.
 		if (std::string(string1).compare("COFF") == 0) {
@@ -115,6 +118,14 @@ public:
 				m_vertices.push_back(v);
 				m_verticesPrime.push_back(v);
 			}
+
+			for(int i : fixedPoints){
+					Constraint c;
+					c.vertexID = i;
+					c.position = m_vertices[i].position;
+					m_constraints.push_back(c);
+					// cout<<"Added constraint with ID "<<i<<" and position "<<v.position<<" Constraints length = "<<m_constraints.size()<<endl;
+			}
 		}
 		else if (std::string(string1).compare("OFF") == 0) {
 			// We only have vertex information.
@@ -126,9 +137,18 @@ public:
 				v.color.y() = 0;
 				v.color.z() = 0;
 				v.color.w() = 255;
+
 				m_vertices.push_back(v);
-				//TODO How do we initialize PPrime?
 				m_verticesPrime.push_back(v);
+
+			}
+
+			for(int i : fixedPoints){
+					Constraint c;
+					c.vertexID = i;
+					c.position = m_vertices[i].position;
+					m_constraints.push_back(c);
+					cout<<"Added constraint with ID "<<i<<" and position "<<m_vertices[i].position<<" Constraints length = "<<m_constraints.size()<<endl;
 			}
 		}
 		else {
@@ -184,13 +204,31 @@ public:
 		return true;
 	}
 
-	void applyConstrainedPoints(int handleID, vector<int> fixedPoints){
-		m_handleID = handleID;
-		cout << "fixedpoints given to apply " << fixedPoints.size()<<endl;
-		// Fixed vertices
-		for(int f : fixedPoints){
-			m_fixedVertices.push_back(f);
+	// void applyConstrainedPoints(int handleID, vector<int> fixedPoints){
+	// 	m_handleID = handleID;
+	// 	cout << "fixedpoints given to apply " << fixedPoints.size()<<endl;
+	// 	// Fixed vertices
+	// 	for(int f : fixedPoints){
+	// 		m_fixedVertices.push_back(f);
+	// 	}
+	// }
+
+	void setHandleConstraint(int handleID, Vector3f newHandlePosition){
+		for (int i=0;i< m_constraints.size();++i){
+			if(m_constraints[i].vertexID==handleID){
+				m_constraints[i].position = newHandlePosition;
+				cout<<"Set fixed vertex with ID "<<m_constraints[i].vertexID<< " to "<<m_constraints[i].position<<endl;
+			}
 		}
+	}
+
+	Vector3f getConstraintI(int id){
+		for (Constraint c : m_constraints){
+			if(c.vertexID==id){
+				return c.position;
+			}
+		}
+		throw std::invalid_argument( "received id which is not in fixed vertices" );
 	}
 
 	void printPs(){
@@ -283,8 +321,8 @@ public:
 		return m_numV;
 	}
 
-	int getNumberOfFixedVertices(){
-		return m_fixedVertices.size();
+	int getNumberOfConstraints(){
+		return m_constraints.size();
 	}
 
 	MatrixXf getRotation(int i){
@@ -366,12 +404,15 @@ public:
 		return acos((a).dot(b)/(a.norm()*b.norm()))*180 / M_PI;
 	}
 
-	vector<int> getFixedVertices(){
-		return m_fixedVertices;
+	vector<Constraint> getConstraints(){
+		return m_constraints;
 	}
 
-	bool isInFixedVertices(int i){
-		return std::find(m_fixedVertices.begin(), m_fixedVertices.end(), i) != m_fixedVertices.end();
+	bool isInConstraints(int i){
+		for(Constraint c : m_constraints){
+			if(c.vertexID == i) return true;
+		}
+		return false;
 	}
 
 	bool isHandle(int i){
@@ -410,32 +451,33 @@ public:
         return cot_theta_sum * 0.5;
 	}
 
-	//TODO evtl liegt hier der fehler, systemmatrix L paper S.5 
+
 	void calculateSystemMatrix(){ 
 
 		m_systemMatrix = MatrixXf::Zero(m_numV, m_numV);
 		for(int i=0;i<m_numV;i++){
 			// m_systemMatrix(i,i) = 0.0f;
-			for(int j =0;j<m_numV; j++){
+			vector<int> neighbors = getNeighborsOf(i);
+        	int numNeighbors = neighbors.size();
+			for ( int j = 0; j< numNeighbors; ++j)
+			{   
+				int neighborVertex = neighbors[j];
 				m_systemMatrix(i,i) += m_weightMatrix(i,j);
-				m_systemMatrix(i,j) = -m_weightMatrix(i,j);
-				//m_systemMatrix(i,i) += 1.0f; // ?????
-				//m_systemMatrix(i,j) = -1.0f;
+				m_systemMatrix(i,neighborVertex) = -m_weightMatrix(i,neighborVertex);
 			}
 		}
 
 		cout << "handleID " <<m_handleID << endl;
-		cout << "#fixed " << m_fixedVertices.size() << endl;
-		 for (int i : m_fixedVertices){
-			 if (!isHandle(i)) {
+		cout << "#fixed " << m_constraints.size() << endl;
+		 for (Constraint c : m_constraints){
+			 int i = c.vertexID;
+			//  if (!isHandle(i)) {
 				 cout << "cleared for fixed vertex " << i << endl;
 				 m_systemMatrix.row(i).setZero();
 				 m_systemMatrix.col(i).setZero();
-			 }
+			//  }
 		 	m_systemMatrix(i, i) = 1;
 		}
-
-        
 	}
 
     // Writes mesh to file
@@ -471,8 +513,8 @@ public:
 
 private:
 	vector<Vertex> m_vertices;
-	vector<int> m_fixedVertices;
-	vector<Vertex> m_fixedVerticesPositions;
+	// vector<int> m_fixedVertices;
+	// vector<Vertex> m_fixedVerticesPositions;
 	vector<Vertex> m_verticesPrime;
 	vector<Triangle> m_triangles;
 	MatrixXf m_neighborMatrix;
@@ -485,6 +527,7 @@ private:
 	int m_handleID;
 	Vector3f m_newHandlePosition;
 	vector<MatrixXf> m_precomputedPMatrices;
+	vector<Constraint> m_constraints;
 
 
 	/**

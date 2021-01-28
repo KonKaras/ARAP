@@ -28,7 +28,9 @@ int main() {
 	 ***/
 
 	// Load the source and target mesh.
-	const std::string filenameMesh = std::string("../data/bunny/test.off");
+	// const std::string filenameMesh = std::string("../data/bunny/test.off");
+	const std::string filenameMesh = std::string("/home/nnrthmr/Code/MotionCaptring&3dScanning_WS20/FinalProject/arap/data/bunny/test.off");
+
 
 	vector<int> fixedPoints; //hier sammeln wir die vertices die sich nciht bewegen durfen
 	fixedPoints.push_back(0);
@@ -36,13 +38,13 @@ int main() {
 	fixedPoints.push_back(2);
 	fixedPoints.push_back(3);
 	fixedPoints.push_back(4);
-	fixedPoints.push_back(5);
+	//fixedPoints.push_back(5);
 	fixedPoints.push_back(6);
 	fixedPoints.push_back(7);
 	fixedPoints.push_back(8);
 	fixedPoints.push_back(9);
-	int handleID = 2;
-	Vector3f handleMoved(-1, 2, 0); // Zum testen: vertex 0 soll einfach nur um eins nach oben gehoben werden
+	int handleID = 0;
+	Vector3f handleMoved(0, 0, 0.5); // Zum testen: vertex 0 soll einfach nur um eins nach oben gehoben werden
 
 
 	SimpleMesh sourceMesh;

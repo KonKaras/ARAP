@@ -7,85 +7,90 @@ using namespace std;
 
 #define THRESHOLD 1.0e-3f
 
-void estimateRotation(SimpleMesh *mesh, int vertexID) {
+void estimateRotation(SimpleMesh *mesh) {
 		// Assume vertices are fix, solve for rotations with Procrustes
+        for(int vertexID=0; vertexID< mesh->getNumberOfVertices(); ++vertexID){
+            // Sorkine paper: PDP' for vertex i with neighbors j (P contains edges of fan as cols, P' edges of deformed fan, D diagonal with weights w_ij)
+            Matrix3f rotation = Matrix3f::Identity();
+            vector<int> neighbors = mesh->getNeighborsOf(vertexID);
+            int numNeighbors = neighbors.size();
 
-        // Sorkine paper: PDP' for vertex i with neighbors j (P contains edges of fan as cols, P' edges of deformed fan, D diagonal with weights w_ij)
-		Matrix3f rotation = Matrix3f::Identity();
-        vector<int> neighbors = mesh->getNeighborsOf(vertexID);
-        int numNeighbors = neighbors.size();
+            // // P precomputed in SimpleMesh.loadMesh()
+            MatrixXf PPrime =MatrixXf::Zero(3, numNeighbors); // TODO did I miss any initialization of the deformed vertices?
+            MatrixXf P =MatrixXf::Zero(3, numNeighbors);
+            MatrixXf D = MatrixXf::Zero(numNeighbors, numNeighbors);
 
-		// // P precomputed in SimpleMesh.loadMesh()
-		MatrixXf PPrime =MatrixXf::Zero(3, numNeighbors); // TODO did I miss any initialization of the deformed vertices?
-        MatrixXf P =MatrixXf::Zero(3, numNeighbors);
-        MatrixXf D = MatrixXf::Zero(numNeighbors, numNeighbors);
+            for ( int j = 0; j< numNeighbors; ++j)
+            {   
+                int neighborVertex = neighbors[j];
+                PPrime.col(j) = mesh->getDeformedVertex(vertexID) - mesh->getDeformedVertex(neighborVertex);
+                P.col(j) = mesh->getVertex(vertexID) - mesh->getVertex(neighborVertex);
+                //D(j,j) = 1.0f;
+                D(j,j) = mesh->getWeight(vertexID, neighborVertex);
+            } 
 
-		for ( int j = 0; j< numNeighbors; ++j)
-		{   
-            int neighborVertex = neighbors[j];
-			PPrime.col(j) = mesh->getDeformedVertex(vertexID) - mesh->getDeformedVertex(neighborVertex);
-            P.col(j) = mesh->getVertex(vertexID) - mesh->getVertex(neighborVertex);
-            //D(j,j) = 1.0f;
-            D(j,j) = mesh->getWeight(vertexID, neighborVertex);
-		} 
+            //MatrixXf P = mesh->getPrecomputedP(vertexID);
 
-        //MatrixXf P = mesh->getPrecomputedP(vertexID);
-
-        //Procrustes
-		JacobiSVD<MatrixXf> svd(P * D * PPrime.transpose(), ComputeThinU | ComputeThinV);
-		rotation = svd.matrixV() * svd.matrixU().transpose(); // TODO svd() gives A=USV but in paper A=USV' and R=VU' -> both need transpose? Edit: We think that MatrixV from svd function is already V and not V'
-		if(rotation.determinant() < 0)
-		{
-            MatrixXf svd_u = svd.matrixU();
-            svd_u.rightCols(1) = svd_u.rightCols(1) * -1; 
-			rotation = svd.matrixV() * svd_u.transpose(); // TODO not sure which, U or V or both, need to be transposed Edit: Should be the same calculation as before (V*U')
-		}
-        assert(rotation.determinant() > 0);
-		mesh->setRotation(vertexID, rotation);
+            //Procrustes
+            JacobiSVD<MatrixXf> svd(P * D * PPrime.transpose(), ComputeThinU | ComputeThinV);
+            rotation = svd.matrixV().transpose() * svd.matrixU().transpose(); // TODO svd() gives A=USV but in paper A=USV' and R=VU' -> both need transpose? Edit: We think that MatrixV from svd function is already V and not V'
+            if(rotation.determinant() < 0)
+            {
+                MatrixXf svd_u = svd.matrixU();
+                svd_u.rightCols(1) = svd_u.rightCols(1) * -1; 
+                rotation = svd.matrixV() * svd_u.transpose(); // TODO not sure which, U or V or both, need to be transposed Edit: Should be the same calculation as before (V*U')
+            }
+            assert(rotation.determinant() > 0);
+            mesh->setRotation(vertexID, rotation);
+        }
 }
 
 //Calculates the right hand side of the LGS TODO I think maybe there is a bug here
-void calculateB(SimpleMesh *mesh){
+void updateB(SimpleMesh *mesh){
 
     mesh->m_b = MatrixXf::Zero(mesh->getNumberOfVertices(), 3);
     for ( int i = 0; i< mesh->getNumberOfVertices(); ++i)
     {
-        vector<int> neighbors = mesh->getNeighborsOf(i);
-        int numNeighbors = neighbors.size();
         Vector3f sum(0.0f, 0.0f, 0.0f);
-        for ( int neighborID : neighbors)
-        {
-            float w_ij = mesh->getWeight(i, neighborID); //Added corresponding weights instead of 1.0f
-            sum += w_ij * 0.5 * (mesh->getRotation(i)+ mesh->getRotation(neighborID))*(mesh->getVertex(i) - mesh->getVertex(neighborID));
-            // b += mesh->getWeight(i, neighborID) * 0.5 * (mesh->getRotation(i)+ mesh->getRotation(neighborID))*(mesh->getVertex(i) - mesh->getVertex(neighborID));
+        if(mesh->isInConstraints(i)){
+            sum = mesh->getConstraintI(i);
         }
-
+        else{
+            vector<int> neighbors = mesh->getNeighborsOf(i);
+            int numNeighbors = neighbors.size();
+        
+            for ( int neighborID : neighbors)
+            {
+                float w_ij = mesh->getWeight(i, neighborID);
+                sum += w_ij * 0.5 * (mesh->getRotation(i)+ mesh->getRotation(neighborID))*(mesh->getVertex(i) - mesh->getVertex(neighborID));
+            }
+        }
         mesh->m_b.row(i) = sum;
     }
-    
 }
 
-void estimateVertices(SimpleMesh *mesh){
-    // MatrixXf b = MatrixXf::Zero(mesh->getNumberOfVertices(), 3);
-    calculateB(mesh);
+void estimateVertices(SimpleMesh *mesh){    
     MatrixXf systemMatrix = mesh->getSystemMatrix();
-
-    for(int fixedVertex : mesh->getFixedVertices()){
-
-        for (int i = 0; i < mesh->getNeighborsOf(fixedVertex).size(); ++i){
-            cout << "system at " << i << " " << fixedVertex <<" "<< systemMatrix(i, fixedVertex) <<endl;
-            cout << "before estimate " << mesh->m_b.row(i) << endl;
-            mesh->m_b.row(i) -= systemMatrix(i, fixedVertex) * mesh->getDeformedVertex(fixedVertex);
-            cout << "after estimate " << mesh->m_b.row(i) << endl;
-            // mesh->m_b.row(i)[1] -= systemMatrix(i, fixedVertex) * mesh->getDeformedVertex(fixedVertex).y();
-			// mesh->m_b.row(i)[2] -= systemMatrix(i, fixedVertex) * mesh->getDeformedVertex(fixedVertex).z();
-        }
-
+    
+    // for(Constraint c : mesh->getConstraints()){
+    //     int fixedVertex = c.vertexID;
+    //     vector<int> neighbors = mesh->getNeighborsOf(fixedVertex);
+    //     int numNeighbors = neighbors.size();
+    //     for (int i = 0; i < numNeighbors; ++i){
+    //         int neighborID = neighbors[i];
         
-        mesh->m_b.row(fixedVertex) = mesh->getDeformedVertex(fixedVertex);
-        for (int i = 0; i < mesh->getNumberOfVertices(); ++i) systemMatrix(fixedVertex, i) = systemMatrix(i, fixedVertex) = 0.0f;
-        systemMatrix(fixedVertex, fixedVertex) = 1.0f;        
-    }
+    //         // cout << "system at " << i << " " << fixedVertex <<" "<< systemMatrix(i, fixedVertex) <<endl;
+    //         // cout << "before estimate " << mesh->m_b.row(i) << endl;
+    //         mesh->m_b.row(neighborID) -= systemMatrix(neighborID, fixedVertex) * mesh->getDeformedVertex(fixedVertex);
+    //         // cout << "after estimate " << mesh->m_b.row(i) << endl;
+    //         // mesh->m_b.row(i)[1] -= systemMatrix(i, fixedVertex) * mesh->getDeformedVertex(fixedVertex).y();
+	// 		// mesh->m_b.row(i)[2] -= systemMatrix(i, fixedVertex) * mesh->getDeformedVertex(fixedVertex).z();
+    //     }
+
+    //     // mesh->m_b.row(fixedVertex) = mesh->getDeformedVertex(fixedVertex);
+    //     // for (int i = 0; i < mesh->getNumberOfVertices(); ++i) systemMatrix(fixedVertex, i) = systemMatrix(i, fixedVertex) = 0.0f;
+    //     // systemMatrix(fixedVertex, fixedVertex) = 1.0f;        
+    // }
     
     //Solve LES with Cholesky, L positive definite // TODO test sparse cholesky on sparse eigen matrices
     cout<<"Solving LES ..." <<endl;
@@ -127,20 +132,18 @@ float calculateEnergy(SimpleMesh *mesh){ // TODO not sure if implemented energy 
 }
 
 void applyDeformation(SimpleMesh *mesh, int handleID, Vector3f handleNewPosition, int iterations){
-    //mesh->applyConstrainedPoints(handleID, handleNewPosition, fixedPoints);
-    // mesh->printPs();
-    // mesh->printNewHandlePosition();
+    mesh->setHandleConstraint(handleID, handleNewPosition);
     float energy=999.0f;
     int iter=0;
     cout<<"Applying deformation for handle with ID " << handleID << " to new position " << handleNewPosition.x() <<","<< handleNewPosition.y()<< ","<< handleNewPosition.z()<<endl;
-    mesh->setPPrime(handleID, handleNewPosition);
+
     while(iter < iterations && abs(energy) > THRESHOLD){
         cout<<"[Iteration "<<iter<<"]"<<endl;
 
-        for(int i=0; i< mesh->getNumberOfVertices(); ++i){
-            estimateRotation(mesh, i);
-        }
+        estimateRotation(mesh);
+        updateB(mesh);
         estimateVertices(mesh);
+
         float energy_i = calculateEnergy(mesh);        
         cout<< "Iteration: "<< iter<< "  Local error: "<< energy_i << endl;
 
