@@ -72,16 +72,19 @@ void estimateVertices(SimpleMesh *mesh){
 
     for(int fixedVertex : mesh->getFixedVertices()){
 
-        for(int i=0; i< mesh->getNumberOfVertices(); ++i){
+        for (int i = 0; i < mesh->getNeighborsOf(fixedVertex).size(); ++i){
+            cout << "system at " << i << " " << fixedVertex <<" "<< systemMatrix(i, fixedVertex) <<endl;
+            cout << "before estimate " << mesh->m_b.row(i) << endl;
             mesh->m_b.row(i) -= systemMatrix(i, fixedVertex) * mesh->getDeformedVertex(fixedVertex);
-			// mesh->m_b.row(i)[1] -= systemMatrix(i, fixedVertex) * mesh->getDeformedVertex(fixedVertex).y();
+            cout << "after estimate " << mesh->m_b.row(i) << endl;
+            // mesh->m_b.row(i)[1] -= systemMatrix(i, fixedVertex) * mesh->getDeformedVertex(fixedVertex).y();
 			// mesh->m_b.row(i)[2] -= systemMatrix(i, fixedVertex) * mesh->getDeformedVertex(fixedVertex).z();
         }
 
-
+        
         mesh->m_b.row(fixedVertex) = mesh->getDeformedVertex(fixedVertex);
         for (int i = 0; i < mesh->getNumberOfVertices(); ++i) systemMatrix(fixedVertex, i) = systemMatrix(i, fixedVertex) = 0.0f;
-		systemMatrix(fixedVertex, fixedVertex) = 1.0f;
+        systemMatrix(fixedVertex, fixedVertex) = 1.0f;        
     }
     
     //Solve LES with Cholesky, L positive definite // TODO test sparse cholesky on sparse eigen matrices
@@ -123,13 +126,14 @@ float calculateEnergy(SimpleMesh *mesh){ // TODO not sure if implemented energy 
     return energy;
 }
 
-void applyDeformation(SimpleMesh *mesh, int handleID, Vector3f handleNewPosition, vector<int> fixedPoints, int iterations){
-    mesh->applyConstrainedPoints(handleID, handleNewPosition, fixedPoints);
+void applyDeformation(SimpleMesh *mesh, int handleID, Vector3f handleNewPosition, int iterations){
+    //mesh->applyConstrainedPoints(handleID, handleNewPosition, fixedPoints);
     // mesh->printPs();
     // mesh->printNewHandlePosition();
     float energy=999.0f;
     int iter=0;
     cout<<"Applying deformation for handle with ID " << handleID << " to new position " << handleNewPosition.x() <<","<< handleNewPosition.y()<< ","<< handleNewPosition.z()<<endl;
+    mesh->setPPrime(handleID, handleNewPosition);
     while(iter < iterations && abs(energy) > THRESHOLD){
         cout<<"[Iteration "<<iter<<"]"<<endl;
 

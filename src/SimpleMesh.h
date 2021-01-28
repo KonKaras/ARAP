@@ -66,7 +66,7 @@ public:
 		return m_triangles;
 	}
 
-	bool loadMesh(const std::string& filename, int handle) {
+	bool loadMesh(const std::string& filename, int handle, vector<int> fixedPoints) {
 		// Read off file (Important: Only .off files are supported).
 		m_vertices.clear();
 		m_verticesPrime.clear();
@@ -90,13 +90,13 @@ public:
 
 		m_numV = numV;
 
-		// // Fixed vertices
-		// for(int f : fixedPoints){
-		// 	m_fixedVertices.push_back(f);
-		// }
+		// Fixed vertices
+		 for(int f : fixedPoints){
+		 	m_fixedVertices.push_back(f);
+		 }
 
 		//Handle is last fixed Vertex. Handle darf sich auch nicht bewegen, da er ja eine fixe zielposition zugewiesen bekommen hat
-		m_fixedVertices.push_back(handle);
+		//m_fixedVertices.push_back(handle);
 		m_handleID = handle;
 
 		// cout << m_fixedVertices.size() << " in m_fixedVertices" <<endl;
@@ -184,12 +184,9 @@ public:
 		return true;
 	}
 
-	void applyConstrainedPoints(int handleID, Vector3f handleNewPosition, vector<int> fixedPoints){
+	void applyConstrainedPoints(int handleID, vector<int> fixedPoints){
 		m_handleID = handleID;
-		Vertex v;
-		v.position = handleNewPosition;
-		m_verticesPrime[handleID] = v;
-
+		cout << "fixedpoints given to apply " << fixedPoints.size()<<endl;
 		// Fixed vertices
 		for(int f : fixedPoints){
 			m_fixedVertices.push_back(f);
@@ -307,6 +304,11 @@ public:
 			m_verticesPrime[i] = v;
 		}
 	}
+	
+	void setPPrime(int index, Vector3f position) {
+		m_verticesPrime[index].position = position;
+	}
+	
 
 	void copyPPrime(){
 		for(int i=0; i< m_numV; i++){
@@ -415,18 +417,23 @@ public:
 		for(int i=0;i<m_numV;i++){
 			// m_systemMatrix(i,i) = 0.0f;
 			for(int j =0;j<m_numV; j++){
-				// m_systemMatrix(i,i) += m_weightMatrix(i,j);
-				// m_systemMatrix(i,j) = -m_weightMatrix(i,j);
-				m_systemMatrix(i,i) += 1.0f; // ?????
-				m_systemMatrix(i,j) = -1.0f;
+				m_systemMatrix(i,i) += m_weightMatrix(i,j);
+				m_systemMatrix(i,j) = -m_weightMatrix(i,j);
+				//m_systemMatrix(i,i) += 1.0f; // ?????
+				//m_systemMatrix(i,j) = -1.0f;
 			}
 		}
 
-		// for (int i : m_fixedVertices){
-		// 	m_systemMatrix.row(i).setZero();
-		// 	m_systemMatrix.col(i).setZero();
-		// 	m_systemMatrix(i, i) = 1;
-		// }
+		cout << "handleID " <<m_handleID << endl;
+		cout << "#fixed " << m_fixedVertices.size() << endl;
+		 for (int i : m_fixedVertices){
+			 if (!isHandle(i)) {
+				 cout << "cleared for fixed vertex " << i << endl;
+				 m_systemMatrix.row(i).setZero();
+				 m_systemMatrix.col(i).setZero();
+			 }
+		 	m_systemMatrix(i, i) = 1;
+		}
 
         
 	}
