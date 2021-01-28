@@ -1,0 +1,6 @@
+src/build
+src/cmake-build-debug
+.idea/
+libs/
+.vscode/
+data/

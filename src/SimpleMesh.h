@@ -8,9 +8,8 @@ using namespace std;
 
 struct Vertex {
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-
-	// Position stored as 4 floats (4th component is supposed to be 1.0)
-	Vector4f position;
+	// Position stored as 3 floats
+	Vector3f position;
 	// Color stored as 4 unsigned char
 	Vector4uc color;
 };
@@ -31,94 +30,7 @@ struct Triangle {
 class SimpleMesh {
 public:
 	SimpleMesh() {}
-
-	/**
-	 * Constructs a mesh from the current color and depth image.
-	 */
-	SimpleMesh(VirtualSensor& sensor, const Matrix4f& cameraPose, float edgeThreshold = 0.01f) {
-		// Get ptr to the current depth frame.
-		// Depth is stored in row major (get dimensions via sensor.GetDepthImageWidth() / GetDepthImageHeight()).
-		float* depthMap = sensor.getDepth();
-		// Get ptr to the current color frame.
-		// Color is stored as RGBX in row major (4 byte values per pixel, get dimensions via sensor.GetColorImageWidth() / GetColorImageHeight()).
-		BYTE* colorMap = sensor.getColorRGBX();
-
-		// Get depth intrinsics.
-		Matrix3f depthIntrinsics = sensor.getDepthIntrinsics();
-		float fovX = depthIntrinsics(0, 0);
-		float fovY = depthIntrinsics(1, 1);
-		float cX = depthIntrinsics(0, 2);
-		float cY = depthIntrinsics(1, 2);
-
-		// Compute inverse depth extrinsics.
-		Matrix4f depthExtrinsicsInv = sensor.getDepthExtrinsics().inverse();
-
-		// Compute inverse camera pose (mapping from camera CS to world CS).
-		Matrix4f cameraPoseInverse = cameraPose.inverse();
-
-		// Compute vertices with back-projection.
-		m_vertices.resize(sensor.getDepthImageWidth() * sensor.getDepthImageHeight());
-		// For every pixel row.
-		for (unsigned int v = 0; v < sensor.getDepthImageHeight(); ++v) {
-			// For every pixel in a row.
-			for (unsigned int u = 0; u < sensor.getDepthImageWidth(); ++u) {
-				unsigned int idx = v*sensor.getDepthImageWidth() + u; // linearized index
-				float depth = depthMap[idx];
-				if (depth == MINF) {
-					m_vertices[idx].position = Vector4f(MINF, MINF, MINF, MINF);
-					m_vertices[idx].color = Vector4uc(0, 0, 0, 0);
-				}
-				else {
-					// Back-projection and tranformation to world space.
-					m_vertices[idx].position = cameraPoseInverse * depthExtrinsicsInv * Vector4f((u - cX) / fovX * depth, (v - cY) / fovY * depth, depth, 1.0f);
-
-					// Project position to color map.
-					Vector3f proj = sensor.getColorIntrinsics() * (sensor.getColorExtrinsics() * cameraPose * m_vertices[idx].position).block<3, 1>(0, 0);
-					proj /= proj.z(); // dehomogenization
-					unsigned int uCol = (unsigned int)std::floor(proj.x());
-					unsigned int vCol = (unsigned int)std::floor(proj.y());
-					if (uCol >= sensor.getColorImageWidth()) uCol = sensor.getColorImageWidth() - 1;
-					if (vCol >= sensor.getColorImageHeight()) vCol = sensor.getColorImageHeight() - 1;
-					unsigned int idxCol = vCol*sensor.getColorImageWidth() + uCol; // linearized index color
-																					//unsigned int idxCol = idx; // linearized index color
-
-					// Write color to vertex.
-					m_vertices[idx].color = Vector4uc(colorMap[4 * idxCol + 0], colorMap[4 * idxCol + 1], colorMap[4 * idxCol + 2], colorMap[4 * idxCol + 3]);
-				}
-			}
-		}
-
-		// Compute triangles (faces).
-		m_triangles.reserve((sensor.getDepthImageHeight() - 1) * (sensor.getDepthImageWidth() - 1) * 2);
-		for (unsigned int i = 0; i < sensor.getDepthImageHeight() - 1; i++) {
-			for (unsigned int j = 0; j < sensor.getDepthImageWidth() - 1; j++) {
-				unsigned int i0 = i*sensor.getDepthImageWidth() + j;
-				unsigned int i1 = (i + 1)*sensor.getDepthImageWidth() + j;
-				unsigned int i2 = i*sensor.getDepthImageWidth() + j + 1;
-				unsigned int i3 = (i + 1)*sensor.getDepthImageWidth() + j + 1;
-
-				bool valid0 = m_vertices[i0].position.allFinite();
-				bool valid1 = m_vertices[i1].position.allFinite();
-				bool valid2 = m_vertices[i2].position.allFinite();
-				bool valid3 = m_vertices[i3].position.allFinite();
-
-				if (valid0 && valid1 && valid2) {
-					float d0 = (m_vertices[i0].position - m_vertices[i1].position).norm();
-					float d1 = (m_vertices[i0].position - m_vertices[i2].position).norm();
-					float d2 = (m_vertices[i1].position - m_vertices[i2].position).norm();
-					if (edgeThreshold > d0 && edgeThreshold > d1 && edgeThreshold > d2)
-						addFace(i0, i1, i2);
-				}
-				if (valid1 && valid2 && valid3) {
-					float d0 = (m_vertices[i3].position - m_vertices[i1].position).norm();
-					float d1 = (m_vertices[i3].position - m_vertices[i2].position).norm();
-					float d2 = (m_vertices[i1].position - m_vertices[i2].position).norm();
-					if (edgeThreshold > d0 && edgeThreshold > d1 && edgeThreshold > d2)
-						addFace(i1, i3, i2);
-				}
-			}
-		}
-	}
+	MatrixXf m_b;
 
 	void clear() {
 		m_vertices.clear();
@@ -154,13 +66,7 @@ public:
 		return m_triangles;
 	}
 
-	void transform(const Matrix4f& transformation) {
-		for (Vertex& v : m_vertices) {
-			v.position = transformation * v.position;
-		}
-	}
-
-	bool loadMesh(const std::string& filename) {
+	bool loadMesh(const std::string& filename, int handle, vector<int> fixedPoints) {
 		// Read off file (Important: Only .off files are supported).
 		m_vertices.clear();
 		m_verticesPrime.clear();
@@ -182,11 +88,18 @@ public:
 		unsigned int numE = 0; //edges
 		file >> numV >> numP >> numE;
 
-		m_vertices.reserve(numV);
-		m_verticesPrime.reserve(numV);
-		m_triangles.reserve(numP);
-
 		m_numV = numV;
+
+		// Fixed vertices
+		 for(int f : fixedPoints){
+		 	m_fixedVertices.push_back(f);
+		 }
+
+		//Handle is last fixed Vertex. Handle darf sich auch nicht bewegen, da er ja eine fixe zielposition zugewiesen bekommen hat
+		//m_fixedVertices.push_back(handle);
+		m_handleID = handle;
+
+		// cout << m_fixedVertices.size() << " in m_fixedVertices" <<endl;
 
 		// Read vertices.
 		if (std::string(string1).compare("COFF") == 0) {
@@ -194,7 +107,7 @@ public:
 			for (unsigned int i = 0; i < numV; i++) {
 				Vertex v;
 				file >> v.position.x() >> v.position.y() >> v.position.z();
-				v.position.w() = 1.f;
+
 				// Colors are stored as integers. We need to convert them.
 				Vector4i colorInt;
 				file >> colorInt.x() >> colorInt.y() >> colorInt.z() >> colorInt.w();
@@ -208,12 +121,13 @@ public:
 			for (unsigned int i = 0; i < numV; i++) {
 				Vertex v;
 				file >> v.position.x() >> v.position.y() >> v.position.z();
-				v.position.w() = 1.f;
+
 				v.color.x() = 0;
 				v.color.y() = 0;
 				v.color.z() = 0;
 				v.color.w() = 255;
 				m_vertices.push_back(v);
+				//TODO How do we initialize PPrime?
 				m_verticesPrime.push_back(v);
 			}
 		}
@@ -222,12 +136,13 @@ public:
 			return false;
 		}
 
-
-		//Create adjacency matrix
-		m_neighborMatrix = MatrixXf::Zero(numP, numP);
-		m_verticesToFaces = std::vector<std::vector<unsigned int>>(numP);
-        m_cellRotations = std::vector<MatrixXf>(numV); // list of Rs per fan
-		m_edgeMatrix = MatrixXf::Zero(numV,numV);
+		//Speicherallokation der wichtigen Matrizen und Listen
+		m_neighborMatrix = MatrixXf::Zero(m_numV, m_numV); // Element (i,j)=1, wenn i und j nachbarb, sonst 0
+		m_verticesToFaces = std::vector<std::vector<unsigned int>>(m_numV); //vtf[i] contains the face IDs that contain vertex ID i
+        m_cellRotations = std::vector<MatrixXf>(m_numV); // eine rotationsmatrix pro vertex
+		m_precomputedPMatrices = vector<MatrixXf>(m_numV); // Vorberechnung der P matrix (paper seite 4 anfang)
+		m_triangles = vector<Triangle>(numP);
+		m_b = MatrixXf::Zero(m_numV, 3);
 
 		// Read faces (i.e. triangles).
 		for (unsigned int i = 0; i < numP; i++) {
@@ -237,18 +152,17 @@ public:
 			
 			Triangle t;
 			file >> t.idx0 >> t.idx1 >> t.idx2;
-			m_triangles.push_back(t);
+			m_triangles[i] = t;
 
 			//fill adjacency matrix
 			addFaceToAdjacencyMatrix(t.idx0, t.idx1, t.idx2);  // 1 for neighbors, 0 else
 			(m_verticesToFaces[t.idx0]).push_back(i); // list of facenumbers for each vertex
 			(m_verticesToFaces[t.idx1]).push_back(i);
 			(m_verticesToFaces[t.idx2]).push_back(i);
+
 		}
 
-
 		for(int i=0; i<numV;i++){
-		 	m_edgeMatrix(i,i) = (m_neighborMatrix.rowwise().sum())[i];
 			m_cellRotations[i] = MatrixXf::Zero(3,3);
 		}
 
@@ -256,7 +170,65 @@ public:
 		cout << "numFaces: "<<numP<<endl;
 		cout << "numEdges: "<<numE<<endl;
 
+		// cout << "Adjacencymatrix: " << m_neighborMatrix <<endl;
+		// cout << m_neighborMatrix.rows() << " - " << m_neighborMatrix.cols()<< endl;
+
+		buildWeightMatrix(); // Die weights werden hier vorberechnet
+
+		// cout << "m_weightmatrix: " << m_weightMatrix <<endl;
+		// cout << "m_weightSum: " << m_weightSum <<endl;
+		// computeDistances();
+		calculateSystemMatrix(); // Die Matrix L (paper seite 5 anfang) wird hier berechnet, also die linke seite des LGS. Siehe auch gegebenen ARAP code.
+		precomputePMatrix(); // Die P matrix (seite 4 anfang) wird berechnet
+
 		return true;
+	}
+
+	void applyConstrainedPoints(int handleID, vector<int> fixedPoints){
+		m_handleID = handleID;
+		cout << "fixedpoints given to apply " << fixedPoints.size()<<endl;
+		// Fixed vertices
+		for(int f : fixedPoints){
+			m_fixedVertices.push_back(f);
+		}
+	}
+
+	void printPs(){
+		cout<< "m_vertices:"<< endl;
+		for(Vertex v : m_vertices){
+			cout << v.position.x() << " "<< v.position.y() << " "<< v.position.z() << endl;
+		}
+	}
+
+	void printNewHandlePosition(){
+		cout<<"New handle position: "<< m_newHandlePosition.x()<< " "<< m_newHandlePosition.y()<< " "<< m_newHandlePosition.z()<<endl;
+	}
+
+	void printPPrimes(){
+		cout<< "m_verticesPrime:"<< endl;
+		for(Vertex v : m_verticesPrime){
+			cout << v.position.x() << " "<< v.position.y() << " "<< v.position.z() << endl;
+		}
+	}
+
+	//Precompute P_i s for the arap estimateRotations() function (page 4 beginning)
+	void precomputePMatrix(){
+		
+		for(int i=0; i< m_numV;i++){
+			vector<int> neighbors = getNeighborsOf(i);
+        	int numNeighbors = neighbors.size();
+			MatrixXf P = MatrixXf::Zero(3, numNeighbors);
+			for ( int j = 0; j< numNeighbors; ++j)
+			{   
+				int neighborVertex = neighbors[j];
+				P.col(j) = getVertex(i) - getVertex(neighborVertex);
+			}
+			m_precomputedPMatrices[i] = P;
+		}
+	}
+
+	MatrixXf getPrecomputedP(int i){
+		return m_precomputedPMatrices[i];
 	}
 
 	void addFaceToAdjacencyMatrix(int v1, int v2 ,int v3){
@@ -268,13 +240,14 @@ public:
         m_neighborMatrix(v3, v2) = 1;
 	}
 
+	//retrun true if both i and j are part of face f
 	bool partOfFace(int i, int j, Triangle f){
-		return (f.idx0 == i && (f.idx1 == j || f.idx2 == j)) ||
-			(f.idx1 == i && (f.idx0 == j || f.idx2 == j)) ||
-			(f.idx2 == i && (f.idx1 == j || f.idx0 == j));
-
+		return (f.idx0 ==i && (f.idx1==j || f.idx2==j)) ||
+				(f.idx1 ==i && (f.idx0==j || f.idx2==j)) ||
+				(f.idx2 ==i && (f.idx1==j || f.idx0==j)) ;
 	}
 
+	//return list of all neighbors of vertex i
 	vector<int> getNeighborsOf(int vertId){
         vector<int> neighbors;
         for(int i=0; i<m_numV; i++){
@@ -282,6 +255,69 @@ public:
 				neighbors.push_back(i);
 		}
         return neighbors;
+	}
+
+	Vector3f getVertex(int i){
+		return m_vertices[i].position;
+	}
+
+	// When filling the B vector the new handle position is needed, however for other vertices their original position is needed which is 
+	// Why we have the two functions getVertex() and getVertexForFillingB(), which differs between handle and not handle
+	//TODO might not be correct to fill row of handle in b vector this way...
+	Vector3f getVertexForFillingB(int i){ 
+		if(i==m_handleID)
+			return m_newHandlePosition;
+		else
+			return m_vertices[i].position;
+	}
+
+	Vector3f getDeformedVertex(int i){
+		return m_verticesPrime[i].position;
+	}
+
+	float getWeight(int i, int j){
+		return m_weightMatrix(i,j);
+	}
+
+	int getNumberOfVertices(){
+		return m_numV;
+	}
+
+	int getNumberOfFixedVertices(){
+		return m_fixedVertices.size();
+	}
+
+	MatrixXf getRotation(int i){
+		return m_cellRotations[i];
+	}
+
+	void setRotation(int i, MatrixXf r){
+		m_cellRotations[i] = r;
+	}
+
+	void setPPrime(MatrixXf pprime){
+		for(int i=0; i< m_numV; i++){
+			Vertex v;
+			v.position.x() = pprime(i,0);
+			v.position.y() = pprime(i,1);
+			v.position.z() = pprime(i,2);			
+			m_verticesPrime[i] = v;
+		}
+	}
+	
+	void setPPrime(int index, Vector3f position) {
+		m_verticesPrime[index].position = position;
+	}
+	
+
+	void copyPPrime(){
+		for(int i=0; i< m_numV; i++){
+			m_vertices[i] = m_verticesPrime[i];
+		}
+	}
+
+	MatrixXf getSystemMatrix(){
+		return m_systemMatrix;
 	}
 
 	int getThirdFacePoint(int i, int j, Triangle f){
@@ -297,19 +333,21 @@ public:
 		return -1;
 	}
 
+	void setNewHandlePosition(Vector3f newPosition){
+		m_newHandlePosition = newPosition;
+	}
+
 	void buildWeightMatrix(){
-		//TODO, https://github.com/TanaTanoi/as-rigid-as-possible-deformation/blob/master/arap.py#L100 line 139
 		cout<<"Generating Weight Matrix"<<endl;
-        m_weightMatrix = MatrixXf(m_numV, m_numV);
-		m_weightSum = MatrixXf(m_numV, m_numV);
+        m_weightMatrix = MatrixXf::Zero(m_numV, m_numV);
+		m_weightSum = MatrixXf::Zero(m_numV, m_numV);
 
         for (int vertex_id= 0; vertex_id < m_numV;vertex_id++){
 			vector<int> neighbors = getNeighborsOf(vertex_id);
             for (int neighbor_id : neighbors)
                 assignWeightForPair(vertex_id, neighbor_id);
 		}
-            
-        cout<< m_weightMatrix<<endl;
+
 	}
 
 	void assignWeightForPair(int i, int j){
@@ -317,14 +355,31 @@ public:
         if(m_weightMatrix(j, i) == 0) //If the opposite weight has not been computed, do so
             weightIJ = computeWeightForPair(i, j);
         else
-            //weightIJ = m_weightMatrix.at(j, i);
+            weightIJ = m_weightMatrix(j, i);
+
         m_weightSum(i, i) += (weightIJ * 0.5);
         m_weightSum(j, j) += (weightIJ * 0.5);
         m_weightMatrix(i, j) = weightIJ;
 	}
+	
+	double angleBetweenVectors(Vector3f a, Vector3f b) {
+		return acos((a).dot(b)/(a.norm()*b.norm()))*180 / M_PI;
+	}
 
-	double angleBetweenVectors(Eigen::Vector3d a, Eigen::Vector3d b) {
-		return std::atan2(a.cross(b).norm(), a.dot(b));
+	vector<int> getFixedVertices(){
+		return m_fixedVertices;
+	}
+
+	bool isInFixedVertices(int i){
+		return std::find(m_fixedVertices.begin(), m_fixedVertices.end(), i) != m_fixedVertices.end();
+	}
+
+	bool isHandle(int i){
+		return i == m_handleID;
+	}
+
+	Vector3f getHandleNewPosition(){
+		return m_newHandlePosition;
 	}
 
     float computeWeightForPair(int i, int j){
@@ -334,8 +389,6 @@ public:
             if(partOfFace(i,j,f)) //If the face contains both I and J, add it
                 localFaces.push_back(f);
 		}
-            
-
         // Either a normal face or a boundry edge, otherwise bad mesh
         assert(localFaces.size() <= 2);
 
@@ -348,14 +401,45 @@ public:
         for (Triangle f : localFaces){
 			int other_vertex_id = getThirdFacePoint(i, j, f);
             Vertex vertex_o = m_vertices[other_vertex_id];
-            //float theta = angleBetweenVectors(vertex_i - vertex_o, vertex_j - vertex_o);
-            //cot_theta_sum += (1 / tan(theta));
+
+            float theta = angleBetweenVectors(vertex_i.position - vertex_o.position, vertex_j.position - vertex_o.position); //TODO is this correct???
+			// cout<<"Theta for i "<<i<<" and j "<<j<<" and other v "<<other_vertex_id<<" = "<<theta<<endl;
+            cot_theta_sum += (1 / tan(theta));
 		}
             
         return cot_theta_sum * 0.5;
 	}
 
-	bool writeMesh(const std::string& filename) {
+	//TODO evtl liegt hier der fehler, systemmatrix L paper S.5 
+	void calculateSystemMatrix(){ 
+
+		m_systemMatrix = MatrixXf::Zero(m_numV, m_numV);
+		for(int i=0;i<m_numV;i++){
+			// m_systemMatrix(i,i) = 0.0f;
+			for(int j =0;j<m_numV; j++){
+				m_systemMatrix(i,i) += m_weightMatrix(i,j);
+				m_systemMatrix(i,j) = -m_weightMatrix(i,j);
+				//m_systemMatrix(i,i) += 1.0f; // ?????
+				//m_systemMatrix(i,j) = -1.0f;
+			}
+		}
+
+		cout << "handleID " <<m_handleID << endl;
+		cout << "#fixed " << m_fixedVertices.size() << endl;
+		 for (int i : m_fixedVertices){
+			 if (!isHandle(i)) {
+				 cout << "cleared for fixed vertex " << i << endl;
+				 m_systemMatrix.row(i).setZero();
+				 m_systemMatrix.col(i).setZero();
+			 }
+		 	m_systemMatrix(i, i) = 1;
+		}
+
+        
+	}
+
+    // Writes mesh to file
+	bool writeMesh(const std::string& filename) { 
 		// Write off file.
 		std::ofstream outFile(filename);
 		if (!outFile.is_open()) return false;
@@ -385,163 +469,23 @@ public:
 		return true;
 	}
 
-	/**
-	 * Joins two meshes together by putting them into the common mesh and transforming the vertex positions of
-	 * mesh1 with transformation 'pose1to2'. 
-	 */
-	static SimpleMesh joinMeshes(const SimpleMesh& mesh1, const SimpleMesh& mesh2, Matrix4f pose1to2 = Matrix4f::Identity()) {
-		SimpleMesh joinedMesh;
-		const auto& vertices1  = mesh1.getVertices();
-		const auto& triangles1 = mesh1.getTriangles();
-		const auto& vertices2  = mesh2.getVertices();
-		const auto& triangles2 = mesh2.getTriangles();
-
-		auto& joinedVertices  = joinedMesh.getVertices();
-		auto& joinedTriangles = joinedMesh.getTriangles();
-
-		const unsigned nVertices1 = vertices1.size();
-		const unsigned nVertices2 = vertices2.size();
-		joinedVertices.reserve(nVertices1 + nVertices2);
-
-		const unsigned nTriangles1 = triangles1.size();
-		const unsigned nTriangles2 = triangles2.size();
-		joinedTriangles.reserve(nVertices1 + nVertices2);
-
-		// Add all vertices (we need to transform vertices of mesh 1).
-		for (int i = 0; i < nVertices1; ++i) {
-			const auto& v1 = vertices1[i];
-			Vertex v;
-			v.position = pose1to2 * v1.position;
-			v.color = v1.color;
-			joinedVertices.push_back(v);
-		}
-		for (int i = 0; i < nVertices2; ++i) joinedVertices.push_back(vertices2[i]);
-
-		// Add all faces (the indices of the second mesh need to be added an offset).
-		for (int i = 0; i < nTriangles1; ++i) joinedTriangles.push_back(triangles1[i]);
-		for (int i = 0; i < nTriangles2; ++i) {
-			const auto& t2 = triangles2[i];
-			Triangle t{ t2.idx0 + nVertices1, t2.idx1 + nVertices1, t2.idx2 + nVertices1 };
-			joinedTriangles.push_back(t);
-		}
-
-		return joinedMesh;
-	}
-
-	/**
-	 * Generates a sphere around the given center point.
-	 */
-	static SimpleMesh sphere(Vector3f center, float scale = 1.f, Vector4uc color = { 0, 0, 255, 255 }) {
-		SimpleMesh mesh;
-		Vector4f centerHomogenous = Vector4f{ center.x(), center.y(), center.z(), 1.f };
-		
-		// These are precomputed values for sphere aproximation.
-		const std::vector<double> vertexComponents = { -0.525731, 0, 0.850651 ,0.525731, 0 ,0.850651, -0.525731, 0 ,-0.850651, 0.525731, 0 ,-0.850651, 0, 0.850651, 0.525731, 0, 0.850651, -0.525731, 0, 
-			-0.850651, 0.525731, 0, -0.850651, -0.525731, 0.850651, 0.525731, 0, -0.850651, 0.525731, 0, 0.850651, -0.525731, 0, -0.850651, -0.525731, 0 };
-		const std::vector<unsigned> faceIndices = { 0, 4, 1, 0, 9, 4, 9, 5, 4, 4, 5, 8, 4, 8, 1, 8, 10, 1, 8, 3, 10, 5, 3, 8, 5, 2, 3, 2, 7, 3, 7, 10,
-			3, 7, 6, 10, 7, 11, 6, 11, 0, 6, 0, 1, 6, 6, 1, 10, 9, 0, 11, 9, 11, 2, 9, 2, 5, 7, 2, 11 };
-
-		// Add vertices.
-		for (int i = 0; i < 12; ++i) {
-			Vertex v;
-			v.position = centerHomogenous + scale * Vector4f{ float(vertexComponents[3 * i + 0]), float(vertexComponents[3 * i + 1]), float(vertexComponents[3 * i + 2]), 0.f };
-			v.color = color;
-			mesh.addVertex(v);
-		}
-
-		// Add faces.
-		for (int i = 0; i < 20; ++i) {
-			mesh.addFace(faceIndices[3 * i + 0], faceIndices[3 * i + 1], faceIndices[3 * i + 2]);
-		}
-
-		return mesh;
-	}
-
-	/**
-	 * Generates a camera object with a given pose.
-	 */
-	static SimpleMesh camera(const Matrix4f& cameraPose, float scale = 1.f, Vector4uc color = { 255, 0, 0, 255 }) {
-		SimpleMesh mesh;
-		Matrix4f cameraToWorld = cameraPose.inverse();
-
-		// These are precomputed values for sphere aproximation.
-		std::vector<double> vertexComponents = { 25, 25, 0, -50, 50, 100, 49.99986, 49.9922, 99.99993, -24.99998, 25.00426, 0.005185, 
-			25.00261, -25.00023, 0.004757, 49.99226, -49.99986, 99.99997, -50, -50, 100, -25.00449, -25.00492, 0.019877 };
-		const std::vector<unsigned> faceIndices = { 1, 2, 3, 2, 0, 3, 2, 5, 4, 4, 0, 2, 5, 6, 7, 7, 4, 5, 6, 1, 7, 1, 3, 7, 3, 0, 4, 7, 3, 4, 5, 2, 1, 5, 1, 6 };
-
-		// Add vertices.
-		for (int i = 0; i < 8; ++i) {
-			Vertex v;
-			v.position = cameraToWorld * Vector4f{ scale * float(vertexComponents[3 * i + 0]), scale * float(vertexComponents[3 * i + 1]), scale * float(vertexComponents[3 * i + 2]), 1.f };
-			v.color = color;
-			mesh.addVertex(v);
-		}
-
-		// Add faces.
-		for (int i = 0; i < 12; ++i) {
-			mesh.addFace(faceIndices[3 * i + 0], faceIndices[3 * i + 1], faceIndices[3 * i + 2]);
-		}
-
-		return mesh;
-	}
-
-	/**
-	 * Generates a cylinder, ranging from point p0 to point p1.
-	 */
-	static SimpleMesh cylinder(const Vector3f& p0, const Vector3f& p1, float radius, unsigned stacks, unsigned slices, const Vector4uc color = Vector4uc{ 0, 0, 255, 255 }) {
-		SimpleMesh mesh;
-		auto& vertices = mesh.getVertices();
-		auto& triangles = mesh.getTriangles();
-
-		vertices.resize((stacks + 1) * slices);
-		triangles.resize(stacks * slices * 2);
-
-		float height = (p1 - p0).norm();
-
-		unsigned vIndex = 0;
-		for (unsigned i = 0; i <= stacks; i++)
-			for (unsigned i2 = 0; i2 < slices; i2++)
-			{
-				auto& v = vertices[vIndex++];
-				float theta = float(i2) * 2.0f * M_PI / float(slices);
-				v.position = Vector4f{ p0.x() + radius * cosf(theta), p0.y() + radius * sinf(theta), p0.z() + height * float(i) / float(stacks), 1.f };
-				v.color = color;
-			}
-
-		unsigned iIndex = 0;
-		for (unsigned i = 0; i < stacks; i++)
-			for (unsigned i2 = 0; i2 < slices; i2++) {
-				int i2p1 = (i2 + 1) % slices;
-
-				triangles[iIndex].idx0 = (i + 1) * slices + i2;
-				triangles[iIndex].idx1 = i * slices + i2;
-				triangles[iIndex].idx2 = i * slices + i2p1;
-
-				triangles[iIndex + 1].idx0 = (i + 1) * slices + i2;
-				triangles[iIndex + 1].idx1 = i * slices + i2p1;
-				triangles[iIndex + 1].idx2 = (i + 1) * slices + i2p1;
-
-				iIndex += 2;
-			}
-
-		Matrix4f transformation = Matrix4f::Identity();
-		transformation.block(0, 0, 3, 3) = face(Vector3f{ 0, 0, 1 }, p1 - p0);
-		transformation.block(0, 3, 3, 1) = p0;
-		mesh.transform(transformation);
-
-		return mesh;
-	}
-
 private:
-	std::vector<Vertex> m_vertices;
-	std::vector<Vertex> m_verticesPrime;
-	std::vector<Triangle> m_triangles;
+	vector<Vertex> m_vertices;
+	vector<int> m_fixedVertices;
+	vector<Vertex> m_fixedVerticesPositions;
+	vector<Vertex> m_verticesPrime;
+	vector<Triangle> m_triangles;
 	MatrixXf m_neighborMatrix;
-	std::vector<MatrixXf> m_cellRotations;
-	MatrixXf m_edgeMatrix;
-	std::vector<std::vector<unsigned int>> m_verticesToFaces;
+	vector<MatrixXf> m_cellRotations;
+	MatrixXf m_systemMatrix;
+	vector<std::vector<unsigned int>> m_verticesToFaces;
 	MatrixXf m_weightMatrix, m_weightSum;
+	// vector<vector<Vector4f>> m_distances;
 	int m_numV;
+	int m_handleID;
+	Vector3f m_newHandlePosition;
+	vector<MatrixXf> m_precomputedPMatrices;
+
 
 	/**
 	 * Returns a rotation that transforms vector vA into vector vB.
@@ -570,4 +514,3 @@ private:
 		return rotation;
 	}
 };
-

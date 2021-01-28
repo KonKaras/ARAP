@@ -1,58 +1,65 @@
 #include <Windows.h>
 #include <iostream>
 #include <fstream>
+#include <chrono>
 
 #include "Eigen.h"
 #include "VirtualSensor.h"
 #include "SimpleMesh.h"
 #include "ICPOptimizer.h"
-#include "ARAPOptimizer.h"
+#include "Arap.h"
 #include "PointCloud.h"
 #include "GUI.h"
 
 using namespace std;
 
 int main() {
+	/***
+	 *  SimpleMesh.m_vertices -> original positions
+	 *  SimpleMesh.m_verticesPrime -> computed new position in deformed mesh
+	 * 	ARAP.deform -> estimateVertices() löst das LGS Lx=b, wobei L=SimpleMesh.m_systemMatrix, x=pprime, b=b im code
+	 * 
+	 * 	test.off
+	 * 	0--1--2--3--4  --> y
+	 *  | /| /| /| /|
+	 * 	5--6--7--8--9
+	 * 	
+	 * 	|
+	 *  x
+	 * 
+	 ***/
+
 	// Load the source and target mesh.
-	const std::string filenameMesh = std::string("../data/bunny/bunny.off");
+	const std::string filenameMesh = std::string("../data/bunny/test.off");
+
+	vector<int> fixedPoints; //hier sammeln wir die vertices die sich nciht bewegen durfen
+	fixedPoints.push_back(0);
+	//fixedPoints.push_back(1);
+	fixedPoints.push_back(2);
+	fixedPoints.push_back(3);
+	fixedPoints.push_back(4);
+	fixedPoints.push_back(5);
+	fixedPoints.push_back(6);
+	fixedPoints.push_back(7);
+	fixedPoints.push_back(8);
+	fixedPoints.push_back(9);
+	int handleID = 2;
+	Vector3f handleMoved(-1, 2, 0); // Zum testen: vertex 0 soll einfach nur um eins nach oben gehoben werden
+
 
 	SimpleMesh sourceMesh;
-	if (!sourceMesh.loadMesh(filenameMesh)) {
+	if (!sourceMesh.loadMesh(filenameMesh, handleID, fixedPoints)) { // in loadMesh() finden wichtige vorberechnungen statt
 		std::cout << "Mesh file wasn't read successfully at location: " << filenameMesh << std::endl;
 		return -1;
 	}
 
+	auto t1 = std::chrono::high_resolution_clock::now();
+	applyDeformation(&sourceMesh, handleID, handleMoved, 3); // Hier passiert die flipflop optimization mit 3 iterationen
+	auto t2 = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<float> eps = t2 - t1;
+	std::cout << "Deformation completed in "<< eps.count() <<" seconds." << std::endl;
 
-	// ARAPOptimizer *optimizer = new ARAPOptimizer();
-	// optimizer->setNumIterations(10);
-
-	// PointCloud mesh{ sourceMesh };
-	// Matrix4f estimatedPose = optimizer->deform();
-
-	std::cout << "ARAP done." << std::endl;
-
-	GUI* gui = new GUI(filenameMesh);
-	//gui->display(filenameMesh);
-	
-	// delete optimizer;
-
-	/*
-	d = Deformer(filename)
-	d.read_file()
-	d.build_weight_matrix()
-	if len(selection_filename) > 0:
-		d.read_deformation_file(deformation_file)
-		d.read_selection_file(selection_filename)
-	d.calculate_laplacian_matrix()
-	d.precompute_p_i()
-	print("Precomputation time ", time.time() - t)
-	t = time.time()
-	d.apply_deformation(iterations)
-	print("Total iteration time", time.time() - t)
-	d.output_s_prime_to_file()
-	d.show_graph()
-	*/
-
+	sourceMesh.writeMesh("../data/bunny/deformedMesh.off"); 
 
 	return 0;
 }
