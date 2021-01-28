@@ -1,4 +1,4 @@
-#include <Windows.h>
+
 #include <iostream>
 #include <fstream>
 #include <chrono>
@@ -9,7 +9,7 @@
 #include "ICPOptimizer.h"
 #include "Arap.h"
 #include "PointCloud.h"
-#include "GUI.h"
+
 
 using namespace std;
 
@@ -33,10 +33,6 @@ int main() {
 	// const std::string filenameMesh = std::string("../data/bunny/test.off");
 	const std::string filenameMesh = std::string("/home/nnrthmr/Code/MotionCaptring&3dScanning_WS20/FinalProject/arap/data/bunny/test.off");
 
-
-	GUI* gui = new GUI(filenameMesh, 3);
-
-	/*
 	vector<int> fixedPoints; //hier sammeln wir die vertices die sich nciht bewegen durfen
 	fixedPoints.push_back(0);
 	//fixedPoints.push_back(1);
@@ -65,6 +61,6 @@ int main() {
 	std::cout << "Deformation completed in "<< eps.count() <<" seconds." << std::endl;
 
 	sourceMesh.writeMesh("../data/bunny/deformedMesh.off"); 
-	*/
+
 	return 0;
 }
