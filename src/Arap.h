@@ -9,7 +9,7 @@ using namespace std;
 
 void estimateRotation(SimpleMesh *mesh) {
 		// Assume vertices are fix, solve for rotations with Procrustes
-        for(int vertexID=0; vertexID< mesh->getNumberOfVertices(); ++vertexID){
+        for(int vertexID=0; vertexID< mesh->getNumberOfVertices(); vertexID++){
             // Sorkine paper: PDP' for vertex i with neighbors j (P contains edges of fan as cols, P' edges of deformed fan, D diagonal with weights w_ij)
             Matrix3f rotation = Matrix3f::Identity();
             vector<int> neighbors = mesh->getNeighborsOf(vertexID);
@@ -20,7 +20,7 @@ void estimateRotation(SimpleMesh *mesh) {
             MatrixXf P =MatrixXf::Zero(3, numNeighbors);
             MatrixXf D = MatrixXf::Zero(numNeighbors, numNeighbors);
 
-            for ( int j = 0; j< numNeighbors; ++j)
+            for ( int j = 0; j< numNeighbors; j++)
             {   
                 int neighborVertex = neighbors[j];
                 PPrime.col(j) = mesh->getDeformedVertex(vertexID) - mesh->getDeformedVertex(neighborVertex);
@@ -33,7 +33,7 @@ void estimateRotation(SimpleMesh *mesh) {
 
             //Procrustes
             JacobiSVD<MatrixXf> svd(P * D * PPrime.transpose(), ComputeThinU | ComputeThinV);
-            rotation = svd.matrixV().transpose() * svd.matrixU().transpose(); // TODO svd() gives A=USV but in paper A=USV' and R=VU' -> both need transpose? Edit: We think that MatrixV from svd function is already V and not V'
+            rotation = svd.matrixV() * svd.matrixU().transpose(); // TODO svd() gives A=USV but in paper A=USV' and R=VU' -> both need transpose? Edit: We think that MatrixV from svd function is already V and not V'
             if(rotation.determinant() < 0)
             {
                 MatrixXf svd_u = svd.matrixU();
@@ -49,7 +49,7 @@ void estimateRotation(SimpleMesh *mesh) {
 void updateB(SimpleMesh *mesh){
 
     mesh->m_b = MatrixXf::Zero(mesh->getNumberOfVertices(), 3);
-    for ( int i = 0; i< mesh->getNumberOfVertices(); ++i)
+    for ( int i = 0; i< mesh->getNumberOfVertices(); i++)
     {
         Vector3f sum(0.0f, 0.0f, 0.0f);
         if(mesh->isInConstraints(i)){
