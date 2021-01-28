@@ -32,6 +32,9 @@ int main() {
 	// Load the source and target mesh.
 	const std::string filenameMesh = std::string("../data/bunny/test.off");
 
+	GUI* gui = new GUI(filenameMesh, 3);
+
+	/*
 	vector<int> fixedPoints; //hier sammeln wir die vertices die sich nciht bewegen durfen
 	fixedPoints.push_back(0);
 	//fixedPoints.push_back(1);
@@ -46,13 +49,13 @@ int main() {
 	int handleID = 2;
 	Vector3f handleMoved(-1, 2, 0); // Zum testen: vertex 0 soll einfach nur um eins nach oben gehoben werden
 
-
+	
 	SimpleMesh sourceMesh;
 	if (!sourceMesh.loadMesh(filenameMesh, handleID, fixedPoints)) { // in loadMesh() finden wichtige vorberechnungen statt
 		std::cout << "Mesh file wasn't read successfully at location: " << filenameMesh << std::endl;
 		return -1;
 	}
-
+	
 	auto t1 = std::chrono::high_resolution_clock::now();
 	applyDeformation(&sourceMesh, handleID, handleMoved, 3); // Hier passiert die flipflop optimization mit 3 iterationen
 	auto t2 = std::chrono::high_resolution_clock::now();
@@ -60,6 +63,6 @@ int main() {
 	std::cout << "Deformation completed in "<< eps.count() <<" seconds." << std::endl;
 
 	sourceMesh.writeMesh("../data/bunny/deformedMesh.off"); 
-
+	*/
 	return 0;
 }

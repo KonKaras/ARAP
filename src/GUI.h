@@ -6,6 +6,7 @@
 
 #include "Eigen.h"
 #include <unsupported/Eigen/src/MatrixFunctions/MatrixSquareRoot.h>
+#include "SimpleMesh.h"
 
 #include <igl/readOFF.h>
 #include <igl/opengl/glfw/Viewer.h>
@@ -19,12 +20,14 @@
 class GUI {
 public:
 
-	GUI(std::string filenameMesh) {
+	GUI(std::string filenameMesh, int iter) {
+		num_iterations = iter;
 		displayMesh(filenameMesh);
 	}
 
-	std::set<int> staticFaces;
-	std::set<int> handles;
+	std::set<int> staticFaces, staticFacesPreviousInit;
+	std::set<int> handles, handlesPreviousInit;
+	int num_iterations;
 
 private:
 
@@ -33,9 +36,13 @@ private:
 	bool mouseDown = false;
 	bool handleDown = false;
 	bool vertexHit = false;
+	bool arapInitialized = false;
 
 	int currentMouseButton = 0;
 	int currentMovingHandle = -1;
+
+	SimpleMesh sourceMesh;
+	std::string meshName;
 
 	Eigen::MatrixXd vertices, colors, handleRep;
 	Eigen::MatrixXi faces;
@@ -44,8 +51,8 @@ private:
 
 	void displayMesh(std::string filenameMesh) {
 		//load mesh
-
 		igl::readOFF(filenameMesh, vertices, faces);
+		meshName = filenameMesh;
 
 		//init white
 		colors = Eigen::MatrixXd::Constant(faces.rows(), 3, 1);
@@ -142,6 +149,7 @@ private:
 					{
 						UpdateColor(fid, Eigen::Vector3d(0, 0, 1), viewer);
 					}
+					RequestArapInit();
 				}
 				else {
 					for each (int fid in staticFaces)
@@ -174,9 +182,61 @@ private:
 
 		viewer.data().set_colors(colors);
 		viewer.data().show_lines = true;
-		viewer.data().show_face_labels = true;
 		
 		viewer.launch();
+	}
+
+	void PerformARAP(Eigen::Vector3d handlePos) {
+		if (arapInitialized) {
+			applyDeformation(&sourceMesh, currentMovingHandle, handlePos.cast<float>(), num_iterations); // Hier passiert die flipflop optimization mit 3 iterationen
+			std::vector<Vertex> deformedVertices = sourceMesh.getVertices();
+			MatrixXd deformedVerticesMat(deformedVertices.size(), 3);
+			for (int i = 0; i < deformedVerticesMat.rows(); i++) {
+				deformedVerticesMat.row(i) = deformedVertices[i].position.cast<double>();
+			}
+			vertices = deformedVerticesMat;
+		}
+	}
+
+	void RequestArapInit() {
+		//check if fixed or handle vertices have been added or removed -> re-init structs
+		if (handles.size() != 0 && (staticFaces != staticFacesPreviousInit || handles != handlesPreviousInit)) {
+			arapInitialized = false;
+			//prepare UI structs
+			std::vector<int> staticsAsVector = GetStaticVerticesFromFaces();//(staticFaces.size());
+			std::vector<int> handlesAsVector;
+			std::copy(handles.begin(), handles.end(), std::back_inserter(handlesAsVector));
+
+			for (int i : staticsAsVector) {
+				std::cout << i << std::endl;
+			}
+
+			//std::cout << handlesAsVector.size() << std::endl;
+
+			int firstHandle = handlesAsVector[0];
+			
+			std::cout << "handles done" << std::endl;
+			//TODO adapt arap for multiple handles
+			if (!sourceMesh.loadMesh(meshName, firstHandle, staticsAsVector)) { // in loadMesh() finden wichtige vorberechnungen statt
+				std::cout << "Mesh file wasn't read successfully at location: " << meshName << std::endl;
+				return;
+			}
+			staticFacesPreviousInit = staticFaces;
+			handlesPreviousInit = handles;
+			arapInitialized = true;
+		}
+	}
+
+	std::vector<int> GetStaticVerticesFromFaces() {
+		std::set<int> staticVertices;
+		for (int face : staticFaces) {
+			for (int i = 0; i < 3; i++) {
+				staticVertices.insert(faces.row(face)(i));
+			}
+		}
+		std::vector<int> staticVerticesAsVector(staticVertices.size());
+		std::copy(staticVertices.begin(), staticVertices.end(), staticVerticesAsVector.begin());
+		return staticVerticesAsVector;
 	}
 
 	bool DisplacementHandler(igl::opengl::glfw::Viewer& viewer) {
@@ -190,10 +250,10 @@ private:
 		//Convert mouse position into world position
 		Eigen::Vector3d worldPos = igl::unproject(Eigen::Vector3f(x, y, (float)projection.z()), viewer.core().view, viewer.core().proj, viewer.core().viewport).cast<double>();
 
-		vertices.row(currentMovingHandle) = worldPos.transpose();//+= diff;
+		///vertices.row(currentMovingHandle) = worldPos.transpose();//+= diff;
 
 		//TODO Send Data to ARAP
-
+		PerformARAP(worldPos);
 		//repaint
 		viewer.data().set_mesh(vertices, faces);
 		return true;
@@ -261,20 +321,6 @@ private:
 				UpdateColor(fid, newColor, viewer);
 				//std::cout << fid << std::endl;
 			}
-			/*
-			else {
-				//unselect face
-				toSelect.erase(fid);
-				UpdateColor(fid, Eigen::Vector3d(1, 1, 1), viewer);
-			}
-			
-			//remove from other set if necessary, a handle cannot be static and a static face cannot be a handle
-			auto& otherFaces = handleSelectionMode ? staticFaces : handles;
-			if (otherFaces.find(fid) != otherFaces.end()) {
-				otherFaces.erase(fid);
-				//std::cout << "erased face " + std::to_string(fid) + " from " + (handleSelectionMode ? "staticFaces" : "faceHandles") << std::endl;
-			}
-			*/
 		}
 	}
 
@@ -282,21 +328,21 @@ private:
 	int GetClosestVertexIdFromBC(int fid, Eigen::Vector3f& bc) {
 		
 		Eigen::Vector3i triangleVertices = faces.row(fid);
-		std::cout << triangleVertices << std::endl;
+		//std::cout << triangleVertices << std::endl;
 		
 		Eigen::MatrixXd closestPoints (3,3);
 
 		for (int i = 0; i < 3; i++) {
 			closestPoints.row(i) = vertices.row(triangleVertices(i));
 		}
-		std::cout << "closest vertices' coordinates" << std::endl;
-		std::cout << closestPoints << std::endl;
+		//std::cout << "closest vertices' coordinates" << std::endl;
+		//std::cout << closestPoints << std::endl;
 		
 	
 		Eigen::Vector3d sqdistances;
 		Eigen::Vector3d queryPoint = bc(0) * closestPoints.row(0) + bc(1) * closestPoints.row(1)+ bc(2) * closestPoints.row(2);
-		std::cout << "Query" << std::endl;
-		std::cout << queryPoint << std::endl;
+		//std::cout << "Query" << std::endl;
+		//std::cout << queryPoint << std::endl;
 
 		
 		//sqdistances = igl::point_mesh_squared_distance(Eigen::MatrixXd(queryPoint(0), queryPoint(1), queryPoint(2)), vertices, faces, sqdistances, closestPoints);
@@ -304,8 +350,8 @@ private:
 			Eigen::Vector3d diff = closestPoints.row(i) - queryPoint.transpose();
 			sqdistances(i) = std::sqrt(diff.dot(diff));
 		}
-		std::cout << "Distances" << std::endl;
-		std::cout << sqdistances << std::endl;
+		//std::cout << "Distances" << std::endl;
+		//std::cout << sqdistances << std::endl;
 		float min = 100;
 		int minId = 0;
 		float current;
@@ -316,7 +362,7 @@ private:
 				minId = i;
 			}
 		}
-		std::cout << "smallest: " + std::to_string(min) + " for vertex " + std::to_string(minId);
+		//std::cout << "smallest: " + std::to_string(min) + " for vertex " + std::to_string(minId);
 		return triangleVertices(minId);
 		
 	}
