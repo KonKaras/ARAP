@@ -77,6 +77,7 @@ public:
 		m_vertices.clear();
 		m_verticesPrime.clear();
 		m_triangles.clear();
+		m_constraints.clear();
 
 		std::ifstream file(filename);
 		if (!file.is_open()) {
@@ -144,10 +145,12 @@ public:
 			}
 
 			for (int i : fixedPoints) {
-				Constraint c;
-				c.vertexID = i;
-				c.position = m_vertices[i].position;
-				m_constraints.push_back(c);
+				//if (i >= 0) {
+					Constraint c;
+					c.vertexID = i;
+					c.position = m_vertices[i].position;
+					m_constraints.push_back(c);
+				//}
 				//cout << "Added constraint with ID " << i << " and position " << m_vertices[i].position << " Constraints length = " << m_constraints.size() << endl;
 			}
 		}
@@ -221,6 +224,7 @@ public:
 			}
 		}
 	}
+
 
 	Vector3f getConstraintI(int id) {
 		for (Constraint c : m_constraints) {
