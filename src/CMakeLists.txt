@@ -5,9 +5,8 @@ set(CMAKE_CONFIGURATION_TYPES Debug Release)
 project(arap)
 
 # Options
-set(LIBRARY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../libs CACHE PATH "Path to lib folder")
+set(LIBRARY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libs CACHE PATH "Path to lib folder")
 set(Eigen3_INCLUDE_DIR ${LIBRARY_DIR}/Eigen/ CACHE PATH "Path to Eigen source folder")
-
 set(IGL_INCLUDE_DIR ${LIBRARY_DIR}/libigl-master/include/ CACHE PATH "Path to igl include folder")
 
 set(GLFW_INCLUDE_DIR ${LIBRARY_DIR}/GLFW/include CACHE PATH "Path to GLFW include folder")
@@ -60,17 +59,15 @@ set(HEADER_FILES
     ICPOptimizer.h 
     ARAPOptimizer.h 
     FreeImageHelper.h
-    GUI.h
 )
 set(SOURCE_FILES 
     FreeImageHelper.cpp
-    glad.c
 )
 
-link_directories(${FreeImage_LIBRARY_DIR} ${GLFW_LIBRARY_DIR} ${GLEW_LIBRARY_DIR})
+link_directories(${FreeImage_LIBRARY_DIR})
 add_executable(arap main.cpp ${HEADER_FILES} ${SOURCE_FILES})
-target_link_libraries(arap ceres freeimage opengl32 glew32s glfw3)
-target_include_directories(arap PUBLIC ${Eigen3_INCLUDE_DIR} ${IGL_INCLUDE_DIR} ${GLFW_INCLUDE_DIR} ${GLEW_INCLUDE_DIR} ${glad_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR} ${Ceres_INCLUDE_DIR} ${glog_INCLUDE_DIR} ${FreeImage_INCLUDE_DIR} ${Flann_INCLUDE_DIR})
+target_link_libraries(arap ceres freeimage)
+target_include_directories(arap PUBLIC ${Eigen3_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}  ${Ceres_INCLUDE_DIR} ${glog_INCLUDE_DIR} ${FreeImage_INCLUDE_DIR} ${Flann_INCLUDE_DIR})
 
 # # Visual Studio properties
 # set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT arap)

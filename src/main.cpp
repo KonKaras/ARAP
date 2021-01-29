@@ -1,4 +1,4 @@
-#include <Windows.h>
+
 #include <iostream>
 #include <fstream>
 #include <chrono>
@@ -10,6 +10,7 @@
 #include "Arap.h"
 #include "PointCloud.h"
 #include "GUI.h"
+
 
 using namespace std;
 
@@ -31,9 +32,8 @@ int main() {
 
 	// Load the source and target mesh.
 	const std::string filenameMesh = std::string("../data/bunny/test.off");
-
+	
 	GUI* gui = new GUI(filenameMesh, 3);
-
 	/*
 	vector<int> fixedPoints; //hier sammeln wir die vertices die sich nciht bewegen durfen
 	fixedPoints.push_back(0);
@@ -47,7 +47,7 @@ int main() {
 	fixedPoints.push_back(8);
 	fixedPoints.push_back(9);
 	int handleID = 2;
-	Vector3f handleMoved(-1, 2, 0); // Zum testen: vertex 0 soll einfach nur um eins nach oben gehoben werden
+	Vector3f handleMoved(-1, 2, 0);
 
 	
 	SimpleMesh sourceMesh;
@@ -64,5 +64,6 @@ int main() {
 
 	sourceMesh.writeMesh("../data/bunny/deformedMesh.off"); 
 	*/
+
 	return 0;
 }
