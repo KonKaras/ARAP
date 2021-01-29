@@ -6,10 +6,16 @@
 #include "Eigen.h"
 using namespace std;
 
+
+#define USE_UNIFORM_WEIGHTS false // 1 / num_neighbors
+#define USE_COTANGENT_WEIGHTS true
+#define USE_CONSTANT_WEIGHTS false
+
+
 struct Vertex {
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-		// Position stored as 3 floats
-		Vector3f position;
+	// Position stored as 3 floats
+	Vector3f position;
 	// Color stored as 4 unsigned char
 	Vector4uc color;
 };
@@ -72,10 +78,10 @@ public:
 		return m_triangles;
 	}
 
-	bool loadMesh(const std::string& filename, int handle, vector<int> fixedPoints) {
+	bool loadMesh(const std::string& filename, int handle, vector<int> fixed_points) {
 		// Read off file (Important: Only .off files are supported).
 		m_vertices.clear();
-		m_verticesPrime.clear();
+		m_vertices_prime.clear();
 		m_triangles.clear();
 
 		std::ifstream file(filename);
@@ -89,25 +95,20 @@ public:
 		file >> string1;
 
 		// Read header.
-		unsigned int numV = 0; //vertices
-		unsigned int numP = 0; //faces
-		unsigned int numE = 0; //edges
-		file >> numV >> numP >> numE;
+		unsigned int num_v = 0; //vertices
+		unsigned int num_p = 0; //faces
+		unsigned int num_e = 0; //edges
+		file >> num_v >> num_p >> num_e;
 
-		m_numV = numV;
-
-		// // Fixed vertices
-		//  for(int f : fixedPoints){
-		//  	m_fixedVertices.push_back(f);
-		//  }
+		m_num_v = num_v;
 
 		//Handle is last fixed Vertex. Handle darf sich auch nicht bewegen, da er ja eine fixe zielposition zugewiesen bekommen hat
-		m_handleID = handle;
+		m_handle_id = handle;
 
 		// Read vertices.
 		if (std::string(string1).compare("COFF") == 0) {
 			// We have color information.
-			for (unsigned int i = 0; i < numV; i++) {
+			for (unsigned int i = 0; i < num_v; i++) {
 				Vertex v;
 				file >> v.position.x() >> v.position.y() >> v.position.z();
 
@@ -116,10 +117,10 @@ public:
 				file >> colorInt.x() >> colorInt.y() >> colorInt.z() >> colorInt.w();
 				v.color = Vector4uc((unsigned char)colorInt.x(), (unsigned char)colorInt.y(), (unsigned char)colorInt.z(), (unsigned char)colorInt.w());
 				m_vertices.push_back(v);
-				m_verticesPrime.push_back(v);
+				m_vertices_prime.push_back(v);
 			}
 
-			for (int i : fixedPoints) {
+			for (int i : fixed_points) {
 				Constraint c;
 				c.vertexID = i;
 				c.position = m_vertices[i].position;
@@ -129,7 +130,7 @@ public:
 		}
 		else if (std::string(string1).compare("OFF") == 0) {
 			// We only have vertex information.
-			for (unsigned int i = 0; i < numV; i++) {
+			for (unsigned int i = 0; i < num_v; i++) {
 				Vertex v;
 				file >> v.position.x() >> v.position.y() >> v.position.z();
 
@@ -139,11 +140,11 @@ public:
 				v.color.w() = 255;
 
 				m_vertices.push_back(v);
-				m_verticesPrime.push_back(v);
+				m_vertices_prime.push_back(v);
 
 			}
 
-			for (int i : fixedPoints) {
+			for (int i : fixed_points) {
 				Constraint c;
 				c.vertexID = i;
 				c.position = m_vertices[i].position;
@@ -157,15 +158,15 @@ public:
 		}
 
 		//Speicherallokation der wichtigen Matrizen und Listen
-		m_neighborMatrix = MatrixXf::Zero(m_numV, m_numV); // Element (i,j)=1, wenn i und j nachbarb, sonst 0
-		m_verticesToFaces = std::vector<std::vector<unsigned int>>(m_numV); //vtf[i] contains the face IDs that contain vertex ID i
-		m_cellRotations = std::vector<MatrixXf>(m_numV); // eine rotationsmatrix pro vertex
-		m_precomputedPMatrices = vector<MatrixXf>(m_numV); // Vorberechnung der P matrix (paper seite 4 anfang)
-		m_triangles = vector<Triangle>(numP);
-		m_b = MatrixXf::Zero(m_numV, 3);
+		m_neighbor_matrix = MatrixXf::Zero(m_num_v, m_num_v); // Element (i,j)=1, wenn i und j nachbarb, sonst 0
+		m_vertices_to_faces = std::vector<std::vector<unsigned int>>(m_num_v); //vtf[i] contains the face IDs that contain vertex ID i
+		m_cell_rotations = std::vector<MatrixXf>(m_num_v); // eine rotationsmatrix pro vertex
+		m_precomputed_p_matrices = vector<MatrixXf>(m_num_v); // Vorberechnung der P matrix (paper seite 4 anfang)
+		m_triangles = vector<Triangle>(num_p);
+		m_b = MatrixXf::Zero(m_num_v, 3);
 
 		// Read faces (i.e. triangles).
-		for (unsigned int i = 0; i < numP; i++) {
+		for (unsigned int i = 0; i < num_p; i++) {
 			unsigned int num_vs;
 			file >> num_vs;
 			ASSERT(num_vs == 3 && "We can only read triangular mesh.");
@@ -176,22 +177,22 @@ public:
 
 			//fill adjacency matrix
 			addFaceToAdjacencyMatrix(t.idx0, t.idx1, t.idx2);  // 1 for neighbors, 0 else
-			(m_verticesToFaces[t.idx0]).push_back(i); // list of facenumbers for each vertex
-			(m_verticesToFaces[t.idx1]).push_back(i);
-			(m_verticesToFaces[t.idx2]).push_back(i);
+			(m_vertices_to_faces[t.idx0]).push_back(i); // list of facenumbers for each vertex
+			(m_vertices_to_faces[t.idx1]).push_back(i);
+			(m_vertices_to_faces[t.idx2]).push_back(i);
 
 		}
 
-		for (int i = 0; i < numV; i++) {
-			m_cellRotations[i] = MatrixXf::Zero(3, 3);
+		for (int i = 0; i < num_v; i++) {
+			m_cell_rotations[i] = MatrixXf::Zero(3, 3);
 		}
 
-		cout << "numVertices: " << numV << endl;
-		cout << "numFaces: " << numP << endl;
-		cout << "numEdges: " << numE << endl;
+		cout << "num_vertices: " << num_v << endl;
+		cout << "numFaces: " << num_p << endl;
+		cout << "num_edges: " << num_e << endl;
 
-		// cout << "Adjacencymatrix: " << m_neighborMatrix <<endl;
-		// cout << m_neighborMatrix.rows() << " - " << m_neighborMatrix.cols()<< endl;
+		// cout << "Adjacencymatrix: " << m_neighbor_matrix <<endl;
+		// cout << m_neighbor_matrix.rows() << " - " << m_neighbor_matrix.cols()<< endl;
 
 		buildWeightMatrix(); // Die weights werden hier vorberechnet
 
@@ -203,15 +204,6 @@ public:
 
 		return true;
 	}
-
-	// void applyConstrainedPoints(int handleID, vector<int> fixedPoints){
-	// 	m_handleID = handleID;
-	// 	cout << "fixedpoints given to apply " << fixedPoints.size()<<endl;
-	// 	// Fixed vertices
-	// 	for(int f : fixedPoints){
-	// 		m_fixedVertices.push_back(f);
-	// 	}
-	// }
 
 	void setHandleConstraint(int handleID, Vector3f newHandlePosition) {
 		for (int i = 0; i < m_constraints.size(); ++i) {
@@ -243,8 +235,8 @@ public:
 	}
 
 	void printPPrimes() {
-		cout << "m_verticesPrime:" << endl;
-		for (Vertex v : m_verticesPrime) {
+		cout << "m_vertices_prime:" << endl;
+		for (Vertex v : m_vertices_prime) {
 			cout << v.position.x() << " " << v.position.y() << " " << v.position.z() << endl;
 		}
 	}
@@ -252,7 +244,7 @@ public:
 	//Precompute P_i s for the arap estimateRotations() function (page 4 beginning)
 	void precomputePMatrix() {
 
-		for (int i = 0; i < m_numV; i++) {
+		for (int i = 0; i < m_num_v; i++) {
 			vector<int> neighbors = getNeighborsOf(i);
 			int numNeighbors = neighbors.size();
 			MatrixXf P = MatrixXf::Zero(3, numNeighbors);
@@ -261,21 +253,21 @@ public:
 				int neighborVertex = neighbors[j];
 				P.col(j) = getVertex(i) - getVertex(neighborVertex);
 			}
-			m_precomputedPMatrices[i] = P;
+			m_precomputed_p_matrices[i] = P;
 		}
 	}
 
 	MatrixXf getPrecomputedP(int i) {
-		return m_precomputedPMatrices[i];
+		return m_precomputed_p_matrices[i];
 	}
 
 	void addFaceToAdjacencyMatrix(int v1, int v2, int v3) {
-		m_neighborMatrix(v1, v2) = 1;
-		m_neighborMatrix(v2, v1) = 1;
-		m_neighborMatrix(v1, v3) = 1;
-		m_neighborMatrix(v3, v1) = 1;
-		m_neighborMatrix(v2, v3) = 1;
-		m_neighborMatrix(v3, v2) = 1;
+		m_neighbor_matrix(v1, v2) = 1;
+		m_neighbor_matrix(v2, v1) = 1;
+		m_neighbor_matrix(v1, v3) = 1;
+		m_neighbor_matrix(v3, v1) = 1;
+		m_neighbor_matrix(v2, v3) = 1;
+		m_neighbor_matrix(v3, v2) = 1;
 	}
 
 	//retrun true if both i and j are part of face f
@@ -288,8 +280,8 @@ public:
 	//return list of all neighbors of vertex i
 	vector<int> getNeighborsOf(int vertId) {
 		vector<int> neighbors;
-		for (int i = 0; i < m_numV; i++) {
-			if (m_neighborMatrix(vertId, i) == 1)
+		for (int i = 0; i < m_num_v; i++) {
+			if (m_neighbor_matrix(vertId, i) == 1)
 				neighbors.push_back(i);
 		}
 		return neighbors;
@@ -303,14 +295,14 @@ public:
 	// Why we have the two functions getVertex() and getVertexForFillingB(), which differs between handle and not handle
 	//TODO might not be correct to fill row of handle in b vector this way...
 	Vector3f getVertexForFillingB(int i) {
-		if (i == m_handleID)
+		if (i == m_handle_id)
 			return m_newHandlePosition;
 		else
 			return m_vertices[i].position;
 	}
 
 	Vector3f getDeformedVertex(int i) {
-		return m_verticesPrime[i].position;
+		return m_vertices_prime[i].position;
 	}
 
 	float getWeight(int i, int j) {
@@ -318,7 +310,7 @@ public:
 	}
 
 	int getNumberOfVertices() {
-		return m_numV;
+		return m_num_v;
 	}
 
 	int getNumberOfConstraints() {
@@ -326,31 +318,31 @@ public:
 	}
 
 	MatrixXf getRotation(int i) {
-		return m_cellRotations[i];
+		return m_cell_rotations[i];
 	}
 
 	void setRotation(int i, MatrixXf r) {
-		m_cellRotations[i] = r;
+		m_cell_rotations[i] = r;
 	}
 
 	void setPPrime(MatrixXf pprime) {
-		for (int i = 0; i < m_numV; i++) {
+		for (int i = 0; i < m_num_v; i++) {
 			Vertex v;
 			v.position.x() = pprime(i, 0);
 			v.position.y() = pprime(i, 1);
 			v.position.z() = pprime(i, 2);
-			m_verticesPrime[i] = v;
+			m_vertices_prime[i] = v;
 		}
 	}
 
 	void setPPrime(int index, Vector3f position) {
-		m_verticesPrime[index].position = position;
+		m_vertices_prime[index].position = position;
 	}
 
 
 	void copyPPrime() {
-		for (int i = 0; i < m_numV; i++) {
-			m_vertices[i] = m_verticesPrime[i];
+		for (int i = 0; i < m_num_v; i++) {
+			m_vertices[i] = m_vertices_prime[i];
 		}
 	}
 
@@ -378,29 +370,76 @@ public:
 	void buildWeightMatrix() {
 		cout << "Generating Weight Matrix" << endl;
 		//TODO compute weights
-		m_weightMatrix = MatrixXf::Ones(m_numV, m_numV);
-		//m_weightMatrix = MatrixXf::Zeros(m_numV, m_numV);
-		//m_weightSum = MatrixXf::Zero(m_numV, m_numV);
-		/*
-		for (int vertex_id = 0; vertex_id < m_numV; vertex_id++) {
-			vector<int> neighbors = getNeighborsOf(vertex_id);
-			for (int neighbor_id : neighbors)
-				assignWeightForPair(vertex_id, neighbor_id);
+		if(USE_CONSTANT_WEIGHTS){
+			m_weightMatrix = MatrixXf::Ones(m_num_v, m_num_v);
 		}
-		*/
+		else{
+			m_weightMatrix = MatrixXf::Zero(m_num_v, m_num_v);
+			for (int i = 0; i < m_num_v; i++) {
+				if(USE_UNIFORM_WEIGHTS){
+					float weight_ij = computeUniformWeightForVertex(i);
+					vector<int> neighbors = getNeighborsOf(i);
+					for (int j : neighbors){
+						m_weightMatrix(i, j) = weight_ij;
+					}
+				}
+				if (USE_COTANGENT_WEIGHTS){
+					vector<int> neighbors = getNeighborsOf(i);
+					for (int j : neighbors){
+						float weight_ij = 0;
+						if (m_weightMatrix(j, i) == 0) 
+							weight_ij = computeCotangentWeightForPair(i, j);
+						else
+							weight_ij = m_weightMatrix(j, i);
+
+						m_weightMatrix(i, j) = weight_ij;
+					}
+				}
+			}
+		}
+		
+
+		cout<<"Weight matrix: "<<m_weightMatrix<<endl;
 		
 	}
 
-	void assignWeightForPair(int i, int j) {
-		float weightIJ;
-		if (m_weightMatrix(j, i) == 0) //If the opposite weight has not been computed, do so
-			weightIJ = computeWeightForPair(i, j);
-		else
-			weightIJ = m_weightMatrix(j, i);
+	float computeUniformWeightForVertex(int i){
+		vector<int> neighbors_i = getNeighborsOf(i);
+		float wij = 1 / (float) neighbors_i.size();
+		cout<<"Uniform weight for vertex "<<i<<" with "<<neighbors_i.size() <<" is : "<<wij<<endl;
+		return wij;
+	}
 
-		//m_weightSum(i, i) += (weightIJ * 0.5);
-		//m_weightSum(j, j) += (weightIJ * 0.5);
-		m_weightMatrix(i, j) = weightIJ;
+	float computeCotangentWeightForPair(int i, int j) {
+		vector<Triangle> local_faces;
+		for (unsigned int id : m_vertices_to_faces[i]) {
+			Triangle f = m_triangles[id];
+			if (partOfFace(i, j, f)) 
+				local_faces.push_back(f);
+		}
+		assert(local_faces.size() <= 2);
+
+		Vertex vertex_i = m_vertices[i];
+		Vertex vertex_j = m_vertices[j];
+
+		// Using the following weights: 0.5 * (cot(alpha) + cot(beta))
+		float cot_theta_sum = 0.0f;
+
+		for (Triangle f : local_faces) {
+			int other_vertex_id = getThirdFacePoint(i, j, f);
+			Vertex vertex_o = m_vertices[other_vertex_id];
+			float theta = cotan(vertex_i.position - vertex_o.position, vertex_j.position - vertex_o.position); 
+			// float theta = angleBetweenVectors(vertex_i.position - vertex_o.position, vertex_j.position - vertex_o.position); 
+			cout<<"Theta for i "<<i<<" and j "<<j<<" and other v "<<other_vertex_id<<" = "<<theta<<endl;
+			// cot_theta_sum += (1 / tan(theta));
+			cot_theta_sum += theta;
+		}
+
+		return cot_theta_sum * 0.5f;
+	}
+
+	float cotan(Vector3f a, Vector3f b){
+    	return (a.dot(b)) / (a.cross(b)).norm();
 	}
 
 	double angleBetweenVectors(Vector3f a, Vector3f b) {
@@ -419,59 +458,30 @@ public:
 	}
 
 	bool isHandle(int i) {
-		return i == m_handleID;
+		return i == m_handle_id;
 	}
 
 	Vector3f getHandleNewPosition() {
 		return m_newHandlePosition;
 	}
 
-	float computeWeightForPair(int i, int j) {
-		vector<Triangle> localFaces;
-		for (unsigned int id : m_verticesToFaces[i]) {
-			Triangle f = m_triangles[id];
-			if (partOfFace(i, j, f)) //If the face contains both I and J, add it
-				localFaces.push_back(f);
-		}
-		// Either a normal face or a boundry edge, otherwise bad mesh
-		assert(localFaces.size() <= 2);
-
-		Vertex vertex_i = m_vertices[i];
-		Vertex vertex_j = m_vertices[j];
-
-		// Using the following weights: 0.5 * (cot(alpha) + cot(beta))
-
-		float cot_theta_sum = 0.0f;
-
-		for (Triangle f : localFaces) {
-			int other_vertex_id = getThirdFacePoint(i, j, f);
-			Vertex vertex_o = m_vertices[other_vertex_id];
-
-			float theta = angleBetweenVectors(vertex_i.position - vertex_o.position, vertex_j.position - vertex_o.position); //TODO is this correct???
-			// cout<<"Theta for i "<<i<<" and j "<<j<<" and other v "<<other_vertex_id<<" = "<<theta<<endl;
-			cot_theta_sum += (1 / tan(theta));
-		}
-
-		return cot_theta_sum * 0.5f;
-	}
-
 
 	void calculateSystemMatrix() {
 
-		m_systemMatrix = MatrixXf::Zero(m_numV, m_numV);
-		for (int i = 0; i < m_numV; i++) {
+		m_systemMatrix = MatrixXf::Zero(m_num_v, m_num_v);
+		for (int i = 0; i < m_num_v; i++) {
 			// m_systemMatrix(i,i) = 0.0f;
 			vector<int> neighbors = getNeighborsOf(i);
 			int numNeighbors = neighbors.size();
 			for (int j = 0; j < numNeighbors; ++j)
 			{
 				int neighborVertex = neighbors[j];
-				m_systemMatrix(i, i) += m_weightMatrix(i, j);
+				m_systemMatrix(i, i) += m_weightMatrix(i, neighborVertex);
 				m_systemMatrix(i, neighborVertex) = -m_weightMatrix(i, neighborVertex);
 			}
 		}
 
-		cout << "handleID " << m_handleID << endl;
+		cout << "handleID " << m_handle_id << endl;
 		cout << "#fixed " << m_constraints.size() << endl;
 		for (Constraint c : m_constraints) {
 			int i = c.vertexID;
@@ -519,18 +529,18 @@ private:
 	vector<Vertex> m_vertices;
 	// vector<int> m_fixedVertices;
 	// vector<Vertex> m_fixedVerticesPositions;
-	vector<Vertex> m_verticesPrime;
+	vector<Vertex> m_vertices_prime;
 	vector<Triangle> m_triangles;
-	MatrixXf m_neighborMatrix;
-	vector<MatrixXf> m_cellRotations;
+	MatrixXf m_neighbor_matrix;
+	vector<MatrixXf> m_cell_rotations;
 	MatrixXf m_systemMatrix;
-	vector<std::vector<unsigned int>> m_verticesToFaces;
+	vector<std::vector<unsigned int>> m_vertices_to_faces;
 	MatrixXf m_weightMatrix;//, m_weightSum;
 	// vector<vector<Vector4f>> m_distances;
-	int m_numV;
-	int m_handleID;
+	int m_num_v;
+	int m_handle_id;
 	Vector3f m_newHandlePosition;
-	vector<MatrixXf> m_precomputedPMatrices;
+	vector<MatrixXf> m_precomputed_p_matrices;
 	vector<Constraint> m_constraints;
 
 

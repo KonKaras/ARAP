@@ -25,7 +25,6 @@ void estimateRotation(SimpleMesh *mesh) {
                 int neighborVertex = neighbors[j];
                 PPrime.col(j) = mesh->getDeformedVertex(vertexID) - mesh->getDeformedVertex(neighborVertex);
                 P.col(j) = mesh->getVertex(vertexID) - mesh->getVertex(neighborVertex);
-                //D(j,j) = 1.0f;
                 D(j,j) = mesh->getWeight(vertexID, neighborVertex);
             } 
 
@@ -97,15 +96,7 @@ void estimateVertices(SimpleMesh *mesh){
     // MatrixXf PPrime = mesh->getSystemMatrix().colPivHouseholderQr().solve(b); //Householder should work in any case, later cholesky or something faster
     static JacobiSVD<Eigen::MatrixXf> svd(systemMatrix, Eigen::ComputeThinU | Eigen::ComputeThinV);
     MatrixXf result = svd.solve(mesh->m_b);
-    // auto result_x = svd.solve(mesh->m_b.col(0));
-    // auto result_y = svd.solve(mesh->m_b.col(1));
-    // auto result_z = svd.solve(mesh->m_b.col(2));
     cout<<"m_b"<<mesh->m_b<<endl;
-
-    // MatrixXf result(3, mesh->getNumberOfVertices());
-    // result.col(0)=result_x;
-    // result.col(1)=result_y;
-    // result.col(2)=result_z;
     cout<<"Done!"<<endl;
     cout<<"Result:" <<endl;
     cout<<result<<endl;
@@ -122,9 +113,8 @@ float calculateEnergy(SimpleMesh *mesh){ // TODO not sure if implemented energy 
         for ( int j : neighbors)
         {
             Vector3f v= ((mesh->getDeformedVertex(i) - mesh->getDeformedVertex(j)) - mesh->getRotation(i) * (mesh->getVertex(i) - mesh->getVertex(j))); 
-            cout << i << " " << j << " Vertex Distance " << (mesh->getDeformedVertex(i) - mesh->getDeformedVertex(j)).transpose() << " Rot diff: " << (mesh->getVertex(i) - mesh->getVertex(j)).transpose() << endl;
+            // cout << i << " " << j << " Vertex Distance " << (mesh->getDeformedVertex(i) - mesh->getDeformedVertex(j)).transpose() << " Rot diff: " << (mesh->getVertex(i) - mesh->getVertex(j)).transpose() << endl;
             cell_energy = mesh->getWeight(i, j) * v.norm();
-            // cell_energy += mesh->getWeight(i,j) * v.norm();
             energy += cell_energy;
         } 
     }
