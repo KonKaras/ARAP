@@ -217,7 +217,7 @@ private:
 			
 			std::cout << "handles done" << std::endl;
 			//TODO adapt arap for multiple handles
-			if (!sourceMesh.loadMesh(meshName, firstHandle, staticsAsVector)) { // in loadMesh() finden wichtige vorberechnungen statt
+			if (!sourceMesh.loadMesh(meshName, staticsAsVector)) { // in loadMesh() finden wichtige vorberechnungen statt
 				std::cout << "Mesh file wasn't read successfully at location: " << meshName << std::endl;
 				return;
 			}
@@ -253,7 +253,7 @@ private:
 		///vertices.row(currentMovingHandle) = worldPos.transpose();//+= diff;
 
 		//TODO Send Data to ARAP
-		PerformARAP(worldPos);
+		PerformARAP(worldPos.transpose());
 		//repaint
 		viewer.data().set_mesh(vertices, faces);
 		return true;

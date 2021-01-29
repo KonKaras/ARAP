@@ -72,7 +72,7 @@ public:
 		return m_triangles;
 	}
 
-	bool loadMesh(const std::string& filename, int handle, vector<int> fixedPoints) {
+	bool loadMesh(const std::string& filename, vector<int> fixedPoints) {
 		// Read off file (Important: Only .off files are supported).
 		m_vertices.clear();
 		m_verticesPrime.clear();
@@ -102,7 +102,7 @@ public:
 		//  }
 
 		//Handle is last fixed Vertex. Handle darf sich auch nicht bewegen, da er ja eine fixe zielposition zugewiesen bekommen hat
-		m_handleID = handle;
+		//m_handleID = handle;
 
 		// Read vertices.
 		if (std::string(string1).compare("COFF") == 0) {
@@ -460,7 +460,6 @@ public:
 
 		m_systemMatrix = MatrixXf::Zero(m_numV, m_numV);
 		for (int i = 0; i < m_numV; i++) {
-			// m_systemMatrix(i,i) = 0.0f;
 			vector<int> neighbors = getNeighborsOf(i);
 			int numNeighbors = neighbors.size();
 			for (int j = 0; j < numNeighbors; ++j)
@@ -471,15 +470,9 @@ public:
 			}
 		}
 
-		cout << "handleID " << m_handleID << endl;
-		cout << "#fixed " << m_constraints.size() << endl;
 		for (Constraint c : m_constraints) {
 			int i = c.vertexID;
-			//  if (!isHandle(i)) {
-			cout << "cleared for fixed vertex " << i << endl;
 			m_systemMatrix.row(i).setZero();
-			//m_systemMatrix.col(i).setZero();
-			//  }
 			m_systemMatrix(i, i) = 1;
 		}
 	}
