@@ -122,7 +122,7 @@ float calculateEnergy(SimpleMesh *mesh){ // TODO not sure if implemented energy 
         for ( int j : neighbors)
         {
             Vector3f v= ((mesh->getDeformedVertex(i) - mesh->getDeformedVertex(j)) - mesh->getRotation(i) * (mesh->getVertex(i) - mesh->getVertex(j))); 
-            cout << i << " " << j << " Vertex Distance " << (mesh->getDeformedVertex(i) - mesh->getDeformedVertex(j)).transpose() << " Rot diff: " << (mesh->getVertex(i) - mesh->getVertex(j)).transpose() << endl;
+            //cout << i << " " << j << " Vertex Distance " << (mesh->getDeformedVertex(i) - mesh->getDeformedVertex(j)).transpose() << " Rot diff: " << (mesh->getVertex(i) - mesh->getVertex(j)).transpose() << endl;
             cell_energy = mesh->getWeight(i, j) * v.norm();
             // cell_energy += mesh->getWeight(i,j) * v.norm();
             energy += cell_energy;
@@ -135,7 +135,7 @@ void applyDeformation(SimpleMesh *mesh, int handleID, Vector3f handleNewPosition
     mesh->setHandleConstraint(handleID, handleNewPosition);
     float energy=999.0f;
     int iter=0;
-    cout<<"Applying deformation for handle with ID " << handleID << " to new position " << handleNewPosition.x() <<","<< handleNewPosition.y()<< ","<< handleNewPosition.z()<<endl;
+    cout<<"Applying deformation for handle with ID " << handleID <<" to new position " << handleNewPosition.x() <<","<< handleNewPosition.y()<< ","<< handleNewPosition.z()<<endl;
 
     while(iter < iterations && abs(energy) > THRESHOLD){
         cout<<"[Iteration "<<iter<<"]"<<endl;

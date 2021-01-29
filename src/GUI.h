@@ -186,15 +186,16 @@ private:
 		viewer.launch();
 	}
 
-	void PerformARAP(Eigen::Vector3d handlePos) {
+	void PerformARAP(Eigen::Vector3f handlePos) {
 		if (arapInitialized) {
-			applyDeformation(&sourceMesh, currentMovingHandle, handlePos.cast<float>(), num_iterations); // Hier passiert die flipflop optimization mit 3 iterationen
+			applyDeformation(&sourceMesh, currentMovingHandle, handlePos, num_iterations); // Hier passiert die flipflop optimization mit 3 iterationen
 			std::vector<Vertex> deformedVertices = sourceMesh.getVertices();
 			MatrixXd deformedVerticesMat(deformedVertices.size(), 3);
 			for (int i = 0; i < deformedVerticesMat.rows(); i++) {
 				deformedVerticesMat.row(i) = deformedVertices[i].position.cast<double>();
 			}
 			vertices = deformedVerticesMat;
+			std::cout << vertices.row(currentMovingHandle) << std::endl;
 		}
 	}
 
@@ -204,16 +205,8 @@ private:
 			arapInitialized = false;
 			//prepare UI structs
 			std::vector<int> staticsAsVector = GetStaticVerticesFromFaces();//(staticFaces.size());
-			std::vector<int> handlesAsVector;
-			std::copy(handles.begin(), handles.end(), std::back_inserter(handlesAsVector));
-
-			for (int i : staticsAsVector) {
-				std::cout << i << std::endl;
-			}
 
 			//std::cout << handlesAsVector.size() << std::endl;
-
-			int firstHandle = handlesAsVector[0];
 			
 			std::cout << "handles done" << std::endl;
 			//TODO adapt arap for multiple handles
@@ -229,6 +222,7 @@ private:
 
 	std::vector<int> GetStaticVerticesFromFaces() {
 		std::set<int> staticVertices;
+		staticVertices.insert(currentMovingHandle);
 		for (int face : staticFaces) {
 			for (int i = 0; i < 3; i++) {
 				staticVertices.insert(faces.row(face)(i));
@@ -248,12 +242,12 @@ private:
 		Eigen::Vector3d projection = igl::project(handlePos, viewer.core().view, viewer.core().proj, viewer.core().viewport).cast<double>();
 
 		//Convert mouse position into world position
-		Eigen::Vector3d worldPos = igl::unproject(Eigen::Vector3f(x, y, (float)projection.z()), viewer.core().view, viewer.core().proj, viewer.core().viewport).cast<double>();
+		Eigen::Vector3f worldPos = igl::unproject(Eigen::Vector3f(x, y, (float)projection.z()), viewer.core().view, viewer.core().proj, viewer.core().viewport);
 
 		///vertices.row(currentMovingHandle) = worldPos.transpose();//+= diff;
 
 		//TODO Send Data to ARAP
-		PerformARAP(worldPos.transpose());
+		PerformARAP(worldPos);
 		//repaint
 		viewer.data().set_mesh(vertices, faces);
 		return true;

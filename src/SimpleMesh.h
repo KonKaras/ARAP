@@ -148,7 +148,7 @@ public:
 				c.vertexID = i;
 				c.position = m_vertices[i].position;
 				m_constraints.push_back(c);
-				cout << "Added constraint with ID " << i << " and position " << m_vertices[i].position << " Constraints length = " << m_constraints.size() << endl;
+				//cout << "Added constraint with ID " << i << " and position " << m_vertices[i].position << " Constraints length = " << m_constraints.size() << endl;
 			}
 		}
 		else {
@@ -217,7 +217,7 @@ public:
 		for (int i = 0; i < m_constraints.size(); ++i) {
 			if (m_constraints[i].vertexID == handleID) {
 				m_constraints[i].position = newHandlePosition;
-				cout << "Set fixed vertex with ID " << m_constraints[i].vertexID << " to " << m_constraints[i].position << endl;
+				//cout << "Set fixed vertex with ID " << m_constraints[i].vertexID << " to " << m_constraints[i].position << endl;
 			}
 		}
 	}

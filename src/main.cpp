@@ -39,18 +39,18 @@ int main() {
 	else {
 		
 		vector<int> fixedPoints; //hier sammeln wir die vertices die sich nciht bewegen durfen
-		fixedPoints.push_back(0);
+		//fixedPoints.push_back(0);
 		//fixedPoints.push_back(1);
 		fixedPoints.push_back(2);
 		fixedPoints.push_back(3);
-		fixedPoints.push_back(4);
-		fixedPoints.push_back(5);
-		fixedPoints.push_back(6);
+		//fixedPoints.push_back(4);
+		//fixedPoints.push_back(5);
+		//fixedPoints.push_back(6);
 		fixedPoints.push_back(7);
 		fixedPoints.push_back(8);
 		fixedPoints.push_back(9);
-		int handleID = 2;
-		Vector3f handleMoved(-3, 2, 0);
+		int handleID = 9;
+		Vector3f handleMoved(2.750159, 3.652282, 0.25415);
 
 
 		SimpleMesh sourceMesh;
