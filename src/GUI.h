@@ -222,14 +222,16 @@ private:
 
 	std::vector<int> GetStaticVerticesFromFaces() {
 		std::set<int> staticVertices;
-		staticVertices.insert(currentMovingHandle);
 		for (int face : staticFaces) {
 			for (int i = 0; i < 3; i++) {
 				staticVertices.insert(faces.row(face)(i));
 			}
 		}
+		if (staticVertices.find(currentMovingHandle) != staticVertices.end()) staticVertices.erase(currentMovingHandle);
+
 		std::vector<int> staticVerticesAsVector(staticVertices.size());
 		std::copy(staticVertices.begin(), staticVertices.end(), staticVerticesAsVector.begin());
+		staticVerticesAsVector.push_back(currentMovingHandle);
 		return staticVerticesAsVector;
 	}
 
