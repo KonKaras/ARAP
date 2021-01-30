@@ -37,6 +37,7 @@ private:
 	bool handleDown = false;
 	bool vertexHit = false;
 	bool arapInitialized = false;
+	bool arapRunning = false;
 
 	int currentMouseButton = 0;
 	int currentMovingHandle = -1;
@@ -98,7 +99,7 @@ private:
 						currentMovingHandle = handleId;
 						viewer.data().clear_points();
 						RequestArapInit();
-						return DisplacementHandler(viewer);
+						return true;// DisplacementHandler(viewer);
 					}
 				}
 			}
@@ -190,13 +191,16 @@ private:
 	}
 
 	void PerformARAP(Eigen::Vector3f handlePos) {
-		if (arapInitialized) {
+		//only run algorithm if initialized and not already running
+		if (arapInitialized && !arapRunning) {
+			arapRunning = true;
 			applyDeformation(&sourceMesh, currentMovingHandle, handlePos, num_iterations); // Hier passiert die flipflop optimization mit 3 iterationen
 			std::vector<Vertex> deformedVertices = sourceMesh.getVertices();
 			//MatrixXd deformedVerticesMat(deformedVertices.size(), 3);
 			for (int i = 0; i < vertices.rows(); i++) {
 				vertices.row(i) = deformedVertices[i].position.cast<double>();
 			}
+			arapRunning = false;
 			//vertices = deformedVerticesMat;
 			//std::cout << vertices.row(currentMovingHandle) << std::endl;
 		}
@@ -213,7 +217,10 @@ private:
 			
 			//std::cout << "handles done" << std::endl;
 			//TODO adapt arap for multiple handles
-			if (!sourceMesh.loadMesh(meshName, staticsAsVector)) { // in loadMesh() finden wichtige vorberechnungen statt
+
+			sourceMesh = SimpleMesh();
+			
+			if (!sourceMesh.loadMeshFromGUI(vertices, faces, staticsAsVector)) { // in loadMesh() finden wichtige vorberechnungen statt
 				std::cout << "Mesh file wasn't read successfully at location: " << meshName << std::endl;
 				return;
 			}

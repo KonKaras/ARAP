@@ -60,7 +60,7 @@ int main() {
 		}
 
 		auto t1 = std::chrono::high_resolution_clock::now();
-		applyDeformation(&sourceMesh, handleID, handleMoved, 3); // Hier passiert die flipflop optimization mit 3 iterationen
+		applyDeformation(&sourceMesh, handleID, handleMoved, 10); // Hier passiert die flipflop optimization mit 3 iterationen
 		auto t2 = std::chrono::high_resolution_clock::now();
 		std::chrono::duration<float> eps = t2 - t1;
 		std::cout << "Deformation completed in "<< eps.count() <<" seconds." << std::endl;

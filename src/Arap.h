@@ -71,6 +71,7 @@ void updateB(SimpleMesh *mesh){
 
 void estimateVertices(SimpleMesh *mesh){    
     MatrixXf systemMatrix = mesh->getSystemMatrix();
+    cout << systemMatrix << endl;
     
     // for(Constraint c : mesh->getConstraints()){
     //     int fixedVertex = c.vertexID;
@@ -133,6 +134,10 @@ float calculateEnergy(SimpleMesh *mesh){ // TODO not sure if implemented energy 
 
 void applyDeformation(SimpleMesh *mesh, int handleID, Vector3f handleNewPosition, int iterations){
     mesh->setHandleConstraint(handleID, handleNewPosition);
+    cout << "Constraints in applyDeform" << endl;
+    for (Constraint i : mesh->getConstraints()) {
+        cout << i.vertexID  << endl;
+    }
     float energy=999.0f;
     int iter=0;
     cout<<"Applying deformation for handle with ID " << handleID <<" to new position " << handleNewPosition.x() <<","<< handleNewPosition.y()<< ","<< handleNewPosition.z()<<endl;
