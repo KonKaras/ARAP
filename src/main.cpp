@@ -4,11 +4,10 @@
 #include <chrono>
 
 #include "Eigen.h"
-#include "VirtualSensor.h"
 #include "SimpleMesh.h"
-#include "Arap.h"
-#include "PointCloud.h"
+#include <Eigen/Sparse>
 // #include "GUI.h"
+#include "ArapDeformer.h"
 
 
 using namespace std;
@@ -34,7 +33,7 @@ int main() {
 	
 	// GUI* gui = new GUI(filenameMesh, 3);
 	
-	vector<int> fixedPoints; //hier sammeln wir die vertices die sich nciht bewegen durfen
+	vector<int> fixedPoints;
 	fixedPoints.push_back(0);
 	//fixedPoints.push_back(1);
 	// fixedPoints.push_back(2);
@@ -50,18 +49,20 @@ int main() {
 
 	
 	SimpleMesh sourceMesh;
-	if (!sourceMesh.loadMesh(filenameMesh, handleID, fixedPoints)) { // in loadMesh() finden wichtige vorberechnungen statt
+	if (!sourceMesh.loadMesh(filenameMesh)) {
 		std::cout << "Mesh file wasn't read successfully at location: " << filenameMesh << std::endl;
 		return -1;
 	}
+
+	ArapDeformer deformer(&sourceMesh);
 	
 	auto t1 = std::chrono::high_resolution_clock::now();
-	applyDeformation(&sourceMesh, handleID, handleMoved, 3); // Hier passiert die flipflop optimization mit 3 iterationen
+	deformer.applyDeformation(fixedPoints, handleID, handleMoved, 3); 
 	auto t2 = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<float> eps = t2 - t1;
 	std::cout << "Deformation completed in "<< eps.count() <<" seconds." << std::endl;
 
-	sourceMesh.writeMesh("../data/bunny/deformedMesh.off"); 
+	// sourceMesh.writeMesh("../data/bunny/deformedMesh.off"); 
 
 	return 0;
 }

@@ -43,12 +43,12 @@ message(STATUS "path to glog include directory = ${glog_INCLUDE_DIR}")
 set(HEADER_FILES 
     Eigen.h 
     SimpleMesh.h 
-    PointCloud.h 
-    VirtualSensor.h 
     FreeImageHelper.h
+    ArapDeformer.h
 )
 set(SOURCE_FILES 
     FreeImageHelper.cpp
+    ArapDeformer.cpp
 )
 
 link_directories(${FreeImage_LIBRARY_DIR})
