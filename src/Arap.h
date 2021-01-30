@@ -93,22 +93,22 @@ void estimateVertices(SimpleMesh *mesh){
     // }
     
     //Solve LES with Cholesky, L positive definite // TODO test sparse cholesky on sparse eigen matrices
-    cout<<"Solving LES ..." <<endl;
+    //cout<<"Solving LES ..." <<endl;
     // MatrixXf PPrime = mesh->getSystemMatrix().colPivHouseholderQr().solve(b); //Householder should work in any case, later cholesky or something faster
     static JacobiSVD<Eigen::MatrixXf> svd(systemMatrix, Eigen::ComputeThinU | Eigen::ComputeThinV);
     MatrixXf result = svd.solve(mesh->m_b);
     // auto result_x = svd.solve(mesh->m_b.col(0));
     // auto result_y = svd.solve(mesh->m_b.col(1));
     // auto result_z = svd.solve(mesh->m_b.col(2));
-    cout<<"m_b"<<mesh->m_b<<endl;
+    //cout<<"m_b"<<mesh->m_b<<endl;
 
     // MatrixXf result(3, mesh->getNumberOfVertices());
     // result.col(0)=result_x;
     // result.col(1)=result_y;
     // result.col(2)=result_z;
-    cout<<"Done!"<<endl;
-    cout<<"Result:" <<endl;
-    cout<<result<<endl;
+    //cout<<"Done!"<<endl;
+    //cout<<"Result:" <<endl;
+    //cout<<result<<endl;
     mesh->setPPrime(result); // set the calculated deformed vertices in the mesh
 }
 
@@ -138,7 +138,7 @@ void applyDeformation(SimpleMesh *mesh, int handleID, Vector3f handleNewPosition
     cout<<"Applying deformation for handle with ID " << handleID <<" to new position " << handleNewPosition.x() <<","<< handleNewPosition.y()<< ","<< handleNewPosition.z()<<endl;
 
     while(iter < iterations && abs(energy) > THRESHOLD){
-        cout<<"[Iteration "<<iter<<"]"<<endl;
+        //cout<<"[Iteration "<<iter<<"]"<<endl;
 
         estimateRotation(mesh);
         updateB(mesh);
@@ -153,7 +153,7 @@ void applyDeformation(SimpleMesh *mesh, int handleID, Vector3f handleNewPosition
         iter++;
     }
     cout << "Resulting energy: "<< energy<< endl; //TODO energy getting bigger rather than smaller :/
-    cout << "PPrime[handleID] is "<< mesh->getDeformedVertex(handleID).x() <<","<< mesh->getDeformedVertex(handleID).y()<< ","<< mesh->getDeformedVertex(handleID).z()<<endl;
+    cout << "PPrime["<<handleID<<"] is "<< mesh->getDeformedVertex(handleID).x() <<","<< mesh->getDeformedVertex(handleID).y()<< ","<< mesh->getDeformedVertex(handleID).z()<<endl;
     // assert(mesh.getDeformedVertex(handleID).x() == handleNewPosition.x());
     // assert(mesh.getDeformedVertex(handleID).y() == handleNewPosition.y());
     // assert(mesh.getDeformedVertex(handleID).z() == handleNewPosition.z());

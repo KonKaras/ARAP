@@ -35,7 +35,8 @@ struct Constraint {
 
 class SimpleMesh {
 public:
-	SimpleMesh() {}
+	SimpleMesh(){
+	}
 	MatrixXf m_b;
 
 	void clear() {
@@ -72,13 +73,20 @@ public:
 		return m_triangles;
 	}
 
+	bool loadMeshFromGUI(){
+		return true;
+	}
+
 	bool loadMesh(const std::string& filename, vector<int> fixedPoints) {
 		// Read off file (Important: Only .off files are supported).
 		m_vertices.clear();
 		m_verticesPrime.clear();
 		m_triangles.clear();
 		m_constraints.clear();
-
+		m_verticesToFaces.clear();
+		m_cellRotations.clear();
+		m_precomputedPMatrices.clear();
+		
 		std::ifstream file(filename);
 		if (!file.is_open()) {
 			std::cout << "Mesh file wasn't read successfully." << std::endl;
@@ -104,7 +112,7 @@ public:
 
 		//Handle is last fixed Vertex. Handle darf sich auch nicht bewegen, da er ja eine fixe zielposition zugewiesen bekommen hat
 		//m_handleID = handle;
-
+		
 		// Read vertices.
 		if (std::string(string1).compare("COFF") == 0) {
 			// We have color information.
@@ -153,11 +161,16 @@ public:
 				//}
 				//cout << "Added constraint with ID " << i << " and position " << m_vertices[i].position << " Constraints length = " << m_constraints.size() << endl;
 			}
+
+			for (Constraint i : m_constraints) {
+				cout << i.vertexID << endl;
+			}
 		}
 		else {
 			std::cout << "Incorrect mesh file type." << std::endl;
 			return false;
 		}
+		
 
 		//Speicherallokation der wichtigen Matrizen und Listen
 		m_neighborMatrix = MatrixXf::Zero(m_numV, m_numV); // Element (i,j)=1, wenn i und j nachbarb, sonst 0

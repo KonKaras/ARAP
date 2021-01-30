@@ -40,6 +40,7 @@ private:
 
 	int currentMouseButton = 0;
 	int currentMovingHandle = -1;
+	int prevMovingHandle = -1;
 
 	SimpleMesh sourceMesh;
 	std::string meshName;
@@ -115,6 +116,7 @@ private:
 				}
 				mouseDown = false;
 				vertexHit = false;
+				prevMovingHandle = currentMovingHandle;
 				currentMovingHandle = -1;
 				handleDown = false;
 			}
@@ -191,25 +193,25 @@ private:
 		if (arapInitialized) {
 			applyDeformation(&sourceMesh, currentMovingHandle, handlePos, num_iterations); // Hier passiert die flipflop optimization mit 3 iterationen
 			std::vector<Vertex> deformedVertices = sourceMesh.getVertices();
-			MatrixXd deformedVerticesMat(deformedVertices.size(), 3);
-			for (int i = 0; i < deformedVerticesMat.rows(); i++) {
-				deformedVerticesMat.row(i) = deformedVertices[i].position.cast<double>();
+			//MatrixXd deformedVerticesMat(deformedVertices.size(), 3);
+			for (int i = 0; i < vertices.rows(); i++) {
+				vertices.row(i) = deformedVertices[i].position.cast<double>();
 			}
-			vertices = deformedVerticesMat;
-			std::cout << vertices.row(currentMovingHandle) << std::endl;
+			//vertices = deformedVerticesMat;
+			//std::cout << vertices.row(currentMovingHandle) << std::endl;
 		}
 	}
 
 	void RequestArapInit() {
 		//check if fixed or handle vertices have been added or removed -> re-init structs
-		if (handles.size() != 0 && (staticFaces != staticFacesPreviousInit || handles != handlesPreviousInit)) {
+		if (handles.size() != 0 && (staticFaces != staticFacesPreviousInit || handles != handlesPreviousInit) || prevMovingHandle != currentMovingHandle) {
 			arapInitialized = false;
 			//prepare UI structs
 			std::vector<int> staticsAsVector = GetStaticVerticesFromFaces();//(staticFaces.size());
 
 			//std::cout << handlesAsVector.size() << std::endl;
 			
-			std::cout << "handles done" << std::endl;
+			//std::cout << "handles done" << std::endl;
 			//TODO adapt arap for multiple handles
 			if (!sourceMesh.loadMesh(meshName, staticsAsVector)) { // in loadMesh() finden wichtige vorberechnungen statt
 				std::cout << "Mesh file wasn't read successfully at location: " << meshName << std::endl;
@@ -223,11 +225,15 @@ private:
 
 	std::vector<int> GetStaticVerticesFromFaces() {
 		std::set<int> staticVertices;
+		bool prevHandleIsNowStatic = false;
 		for (int face : staticFaces) {
 			for (int i = 0; i < 3; i++) {
 				staticVertices.insert(faces.row(face)(i));
 			}
 		}
+		//if the static faces do not contain the prev handle -> make prev handle non-static!
+		//if (!prevHandleIsNowStatic && staticVertices.find(prevMovingHandle) != staticVertices.end()) staticVertices.erase(prevMovingHandle);
+
 		if (staticVertices.find(currentMovingHandle) != staticVertices.end()) staticVertices.erase(currentMovingHandle);
 
 		std::vector<int> staticVerticesAsVector(staticVertices.size());
