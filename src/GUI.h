@@ -221,12 +221,12 @@ private:
 			//TODO adapt arap for multiple handles
 
 			sourceMesh = SimpleMesh();
-			deformer = ArapDeformer(&sourceMesh);
 			
 			if (!sourceMesh.loadMeshFromGUI(vertices, faces, staticsAsVector)) { // in loadMesh() finden wichtige vorberechnungen statt
 				std::cout << "Mesh file wasn't read successfully at location: " << meshName << std::endl;
 				return;
 			}
+			deformer = ArapDeformer(&sourceMesh);
 			deformer.initDeformation(staticsAsVector);
 			staticFacesPreviousInit = staticFaces;
 			handlesPreviousInit = handles;

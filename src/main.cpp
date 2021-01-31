@@ -1,3 +1,4 @@
+#define NOMINMAX
 #include <Windows.h>
 #include <iostream>
 #include <fstream>
@@ -30,7 +31,7 @@ int main() {
 
 	// Load the source and target mesh.
 	const std::string filenameMesh = std::string("../data/bunny/test.off");
-	bool debug = false;
+	bool debug = true;
 	if (!debug) {
 		GUI* gui = new GUI(filenameMesh, 3);
     }
