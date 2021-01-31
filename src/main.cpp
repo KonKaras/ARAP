@@ -31,9 +31,9 @@ int main() {
 
 	// Load the source and target mesh.
 	const std::string filenameMesh = std::string("../data/bunny/test.off");
-	bool debug = true;
+	bool debug = false;
 	if (!debug) {
-		GUI* gui = new GUI(filenameMesh, 3);
+		GUI* gui = new GUI(filenameMesh, 10);
     }
     else{
 		vector<int> fixedPoints;
@@ -44,8 +44,8 @@ int main() {
 		fixedPoints.push_back(4);
 		// fixedPoints.push_back(5);
 		fixedPoints.push_back(7);
-		fixedPoints.push_back(10);
-		fixedPoints.push_back(14);
+		//fixedPoints.push_back(10);
+		//fixedPoints.push_back(14);
 		// fixedPoints.push_back(9);
 		int handleID = 7;
 		Vector3f handleMoved(1, 2, 1);

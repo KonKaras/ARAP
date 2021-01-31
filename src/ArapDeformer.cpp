@@ -195,6 +195,7 @@ void ArapDeformer::calculateSystemMatrix(){
 }
 
 void ArapDeformer::initDeformation(vector<int> fixed_points){
+    m_constraints.clear();
 
     for (int i : fixed_points) {
         Constraint c;

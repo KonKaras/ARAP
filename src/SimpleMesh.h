@@ -54,6 +54,10 @@ public:
 		return m_vertices;
 	}
 
+	std::vector<Vertex>& getDeformedVertices() {
+		return m_vertices_prime;
+	}
+
 	const std::vector<Vertex>& getVertices() const {
 		return m_vertices;
 	}

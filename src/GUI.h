@@ -197,7 +197,9 @@ private:
 		if (arapInitialized && !arapRunning) {
 			arapRunning = true;
 			deformer.applyDeformation(currentMovingHandle, handlePos, num_iterations); // Hier passiert die flipflop optimization mit 3 iterationen
-			std::vector<Vertex> deformedVertices = sourceMesh.getVertices();
+			std::vector<Vertex> deformedVertices = deformer.m_mesh.getVertices();
+			sourceMesh = deformer.m_mesh;
+			cout << "GUI[handleID] is " << deformedVertices[currentMovingHandle].position.x() << "," << deformedVertices[currentMovingHandle].position.y() << "," << deformedVertices[currentMovingHandle].position.z() << endl;
 			//MatrixXd deformedVerticesMat(deformedVertices.size(), 3);
 			for (int i = 0; i < vertices.rows(); i++) {
 				vertices.row(i) = deformedVertices[i].position.cast<double>();
@@ -236,7 +238,8 @@ private:
 
 	std::vector<int> GetStaticVerticesFromFaces() {
 		std::set<int> staticVertices;
-		bool prevHandleIsNowStatic = false;
+		staticVertices.clear();
+		//bool prevHandleIsNowStatic = false;
 		for (int face : staticFaces) {
 			for (int i = 0; i < 3; i++) {
 				staticVertices.insert(faces.row(face)(i));
