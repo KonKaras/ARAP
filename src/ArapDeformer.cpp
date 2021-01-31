@@ -6,6 +6,9 @@
 
 #define USE_SPARSE true
 
+ArapDeformer::ArapDeformer() {
+
+}
 
 ArapDeformer::ArapDeformer(SimpleMesh *mesh) {
     m_mesh = *mesh;
@@ -191,7 +194,7 @@ void ArapDeformer::calculateSystemMatrix(){
     }
 }
 
-void ArapDeformer::applyDeformation(vector<int> fixed_points, int handleID, Vector3f handleNewPosition, int iterations){
+void ArapDeformer::initDeformation(vector<int> fixed_points){
 
     for (int i : fixed_points) {
         Constraint c;
@@ -200,35 +203,38 @@ void ArapDeformer::applyDeformation(vector<int> fixed_points, int handleID, Vect
         m_constraints.push_back(c);
     }
 
+    calculateSystemMatrix();
+}
+
+void ArapDeformer::applyDeformation(int handleID, Vector3f handleNewPosition, int iterations) {
 
     m_handle_id = handleID;
     m_new_handle_position = handleNewPosition;
-    calculateSystemMatrix();
 
     cout << "handleID " << m_handle_id << endl;
     cout << "# fixed Vertices " << m_constraints.size() << endl;
 
     setHandleConstraint(handleID, handleNewPosition);
-    float energy=999.0f;
-    int iter=0;
-    cout<<"Applying deformation for handle with ID " << handleID << " to new position " << handleNewPosition.x() <<","<< handleNewPosition.y()<< ","<< handleNewPosition.z()<<endl;
+    float energy = 999.0f;
+    int iter = 0;
+    cout << "Applying deformation for handle with ID " << handleID << " to new position " << handleNewPosition.x() << "," << handleNewPosition.y() << "," << handleNewPosition.z() << endl;
 
-    while(iter < iterations && abs(energy) > THRESHOLD){
-        cout<<"[Iteration "<<iter<<"]"<<endl;
+    while (iter < iterations && abs(energy) > THRESHOLD) {
+        cout << "[Iteration " << iter << "]" << endl;
 
         estimateRotation();
         updateB();
         estimateVertices();
 
-        float energy_i = calculateEnergy();        
-        cout<< "Iteration: "<< iter<< "  Local error: "<< energy_i << endl;
+        float energy_i = calculateEnergy();
+        cout << "Iteration: " << iter << "  Local error: " << energy_i << endl;
 
-        m_mesh.copyPPrime(); 
+        m_mesh.copyPPrime();
 
         energy = energy_i;
         iter++;
     }
-    cout << "Resulting energy: "<< energy<< endl; 
-    cout << "PPrime[handleID] is "<< m_mesh.getDeformedVertex(handleID).x() <<","<< m_mesh.getDeformedVertex(handleID).y()<< ","<< m_mesh.getDeformedVertex(handleID).z()<<endl;
-    m_mesh.writeMesh("../data/bunny/deformedMesh.off"); 
+    cout << "Resulting energy: " << energy << endl;
+    cout << "PPrime[handleID] is " << m_mesh.getDeformedVertex(handleID).x() << "," << m_mesh.getDeformedVertex(handleID).y() << "," << m_mesh.getDeformedVertex(handleID).z() << endl;
+    m_mesh.writeMesh("../data/bunny/deformedMesh.off");
 }

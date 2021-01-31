@@ -7,6 +7,7 @@
 #include "Eigen.h"
 #include <unsupported/Eigen/src/MatrixFunctions/MatrixSquareRoot.h>
 #include "SimpleMesh.h"
+#include "ArapDeformer.h"
 
 #include <igl/readOFF.h>
 #include <igl/opengl/glfw/Viewer.h>
@@ -44,6 +45,7 @@ private:
 	int prevMovingHandle = -1;
 
 	SimpleMesh sourceMesh;
+	ArapDeformer deformer;
 	std::string meshName;
 
 	Eigen::MatrixXd vertices, colors, handleRep;
@@ -194,7 +196,7 @@ private:
 		//only run algorithm if initialized and not already running
 		if (arapInitialized && !arapRunning) {
 			arapRunning = true;
-			applyDeformation(&sourceMesh, currentMovingHandle, handlePos, num_iterations); // Hier passiert die flipflop optimization mit 3 iterationen
+			deformer.applyDeformation(currentMovingHandle, handlePos, num_iterations); // Hier passiert die flipflop optimization mit 3 iterationen
 			std::vector<Vertex> deformedVertices = sourceMesh.getVertices();
 			//MatrixXd deformedVerticesMat(deformedVertices.size(), 3);
 			for (int i = 0; i < vertices.rows(); i++) {
@@ -219,11 +221,13 @@ private:
 			//TODO adapt arap for multiple handles
 
 			sourceMesh = SimpleMesh();
+			deformer = ArapDeformer(&sourceMesh);
 			
 			if (!sourceMesh.loadMeshFromGUI(vertices, faces, staticsAsVector)) { // in loadMesh() finden wichtige vorberechnungen statt
 				std::cout << "Mesh file wasn't read successfully at location: " << meshName << std::endl;
 				return;
 			}
+			deformer.initDeformation(staticsAsVector);
 			staticFacesPreviousInit = staticFaces;
 			handlesPreviousInit = handles;
 			arapInitialized = true;

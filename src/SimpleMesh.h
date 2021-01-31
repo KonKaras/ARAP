@@ -69,18 +69,18 @@ public:
 	bool loadMeshFromGUI(MatrixXd verticesFromViewer, MatrixXi facesFromViewer, vector<int> fixedPoints){
 		// Read off file (Important: Only .off files are supported).
 		m_vertices.clear();
-		m_verticesPrime.clear();
+		m_vertices_prime.clear();
 		m_triangles.clear();
-		m_constraints.clear();
+		/*m_constraints.clear();
 		m_verticesToFaces.clear();
 		m_cellRotations.clear();
-		m_precomputedPMatrices.clear();
+		m_precomputedPMatrices.clear();*/
 
 		unsigned int numV = verticesFromViewer.rows(); //vertices
 		unsigned int numP = facesFromViewer.rows(); //faces
 		unsigned int numE = 0; //edges
 
-		m_numV = numV;
+		m_num_v = numV;
 
 		// // Fixed vertices
 		//  for(int f : fixedPoints){
@@ -88,7 +88,7 @@ public:
 		//  }
 
 		// Read vertices.
-		if(m_numV != 0 &&  numP != 0) {
+		if(m_num_v != 0 &&  numP != 0) {
 			// We only have vertex information.
 			for (unsigned int i = 0; i < numV; i++) {
 				Vertex v;
@@ -96,22 +96,8 @@ public:
 				v.position = verticesFromViewer.row(i).cast<float>();
 
 				m_vertices.push_back(v);
-				m_verticesPrime.push_back(v);
+				m_vertices_prime.push_back(v);
 
-			}
-
-			for (int i : fixedPoints) {
-				//if (i >= 0) {
-				Constraint c;
-				c.vertexID = i;
-				c.position = m_vertices[i].position;
-				m_constraints.push_back(c);
-				//}
-				//cout << "Added constraint with ID " << i << " and position " << m_vertices[i].position << " Constraints length = " << m_constraints.size() << endl;
-			}
-
-			for (Constraint i : m_constraints) {
-				cout << i.vertexID << endl;
 			}
 		}
 		else {
@@ -119,14 +105,13 @@ public:
 			return false;
 		}
 
-
 		//Speicherallokation der wichtigen Matrizen und Listen
-		m_neighborMatrix = MatrixXf::Zero(m_numV, m_numV); // Element (i,j)=1, wenn i und j nachbarb, sonst 0
-		m_verticesToFaces = std::vector<std::vector<unsigned int>>(m_numV); //vtf[i] contains the face IDs that contain vertex ID i
-		m_cellRotations = std::vector<MatrixXf>(m_numV); // eine rotationsmatrix pro vertex
-		m_precomputedPMatrices = vector<MatrixXf>(m_numV); // Vorberechnung der P matrix (paper seite 4 anfang)
+		m_neighbor_matrix = MatrixXf::Zero(m_num_v, m_num_v); // Element (i,j)=1, wenn i und j nachbarb, sonst 0
+		m_vertices_to_faces = std::vector<std::vector<unsigned int>>(m_num_v); //vtf[i] contains the face IDs that contain vertex ID i
+		//m_cellRotations = std::vector<MatrixXf>(m_numV); // eine rotationsmatrix pro vertex
+		//m_precomputedPMatrices = vector<MatrixXf>(m_numV); // Vorberechnung der P matrix (paper seite 4 anfang)
 		m_triangles = vector<Triangle>(numP);
-		m_b = MatrixXf::Zero(m_numV, 3);
+		m_b = MatrixXf::Zero(m_num_v, 3);
 
 		// Read faces (i.e. triangles).
 		for (unsigned int i = 0; i < numP; i++) {
@@ -143,30 +128,25 @@ public:
 
 			//fill adjacency matrix
 			addFaceToAdjacencyMatrix(t.idx0, t.idx1, t.idx2);  // 1 for neighbors, 0 else
-			(m_verticesToFaces[t.idx0]).push_back(i); // list of facenumbers for each vertex
-			(m_verticesToFaces[t.idx1]).push_back(i);
-			(m_verticesToFaces[t.idx2]).push_back(i);
+			(m_vertices_to_faces[t.idx0]).push_back(i); // list of facenumbers for each vertex
+			(m_vertices_to_faces[t.idx1]).push_back(i);
+			(m_vertices_to_faces[t.idx2]).push_back(i);
 
 		}
 
-		for (int i = 0; i < numV; i++) {
+		/*for (int i = 0; i < numV; i++) {
 			m_cellRotations[i] = MatrixXf::Zero(3, 3);
-		}
+		}*/
 
 		cout << "numVertices: " << numV << endl;
 		cout << "numFaces: " << numP << endl;
 		cout << "numEdges: " << numE << endl;
-
-		// cout << "Adjacencymatrix: " << m_neighborMatrix <<endl;
-		// cout << m_neighborMatrix.rows() << " - " << m_neighborMatrix.cols()<< endl;
-
+		
+		/*
 		buildWeightMatrix(); // Die weights werden hier vorberechnet
 
-		// cout << "m_weightmatrix: " << m_weightMatrix <<endl;
-		// cout << "m_weightSum: " << m_weightSum <<endl;
-		// computeDistances();
 		calculateSystemMatrix(); // Die Matrix L (paper seite 5 anfang) wird hier berechnet, also die linke seite des LGS. Siehe auch gegebenen ARAP code.
-		precomputePMatrix(); // Die P matrix (seite 4 anfang) wird berechnet
+		precomputePMatrix(); // Die P matrix (seite 4 anfang) wird berechnet*/
 
 		return true;
 	}
@@ -176,10 +156,10 @@ public:
 		m_vertices.clear();
 		m_vertices_prime.clear();
 		m_triangles.clear();
-		m_constraints.clear();
+		/*m_constraints.clear();
 		m_verticesToFaces.clear();
 		m_cellRotations.clear();
-		m_precomputedPMatrices.clear();
+		m_precomputedPMatrices.clear();*/
 		
 		std::ifstream file(filename);
 		if (!file.is_open()) {
@@ -227,20 +207,6 @@ public:
 				m_vertices.push_back(v);
 				m_vertices_prime.push_back(v);
 			}
-            /*
-			for (int i : fixedPoints) {
-				//if (i >= 0) {
-					Constraint c;
-					c.vertexID = i;
-					c.position = m_vertices[i].position;
-					m_constraints.push_back(c);
-				//}
-				//cout << "Added constraint with ID " << i << " and position " << m_vertices[i].position << " Constraints length = " << m_constraints.size() << endl;
-			}
-
-			for (Constraint i : m_constraints) {
-				cout << i.vertexID << endl;
-			}*/
 		}
 		else {
 			std::cout << "Incorrect mesh file type." << std::endl;

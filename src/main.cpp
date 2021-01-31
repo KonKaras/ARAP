@@ -6,7 +6,7 @@
 #include "Eigen.h"
 #include "SimpleMesh.h"
 #include <Eigen/Sparse>
-// #include "GUI.h"
+#include "GUI.h"
 #include "ArapDeformer.h"
 
 
@@ -35,40 +35,37 @@ int main() {
 		GUI* gui = new GUI(filenameMesh, 3);
     }
     else{
-	const std::string filenameMesh = std::string("../data/bunny/test2.off");
-	
-	// GUI* gui = new GUI(filenameMesh, 3);
-	
-	vector<int> fixedPoints;
-	fixedPoints.push_back(0);
-	//fixedPoints.push_back(1);
-	// fixedPoints.push_back(2);
-	// fixedPoints.push_back(3);
-	fixedPoints.push_back(4);
-	// fixedPoints.push_back(5);
-	fixedPoints.push_back(7);
-	fixedPoints.push_back(10);
-	fixedPoints.push_back(14);
-	// fixedPoints.push_back(9);
-	int handleID = 7;
-	Vector3f handleMoved(1, 2, 1);
+		vector<int> fixedPoints;
+		fixedPoints.push_back(0);
+		//fixedPoints.push_back(1);
+		// fixedPoints.push_back(2);
+		// fixedPoints.push_back(3);
+		fixedPoints.push_back(4);
+		// fixedPoints.push_back(5);
+		fixedPoints.push_back(7);
+		fixedPoints.push_back(10);
+		fixedPoints.push_back(14);
+		// fixedPoints.push_back(9);
+		int handleID = 7;
+		Vector3f handleMoved(1, 2, 1);
 
 	
-	SimpleMesh sourceMesh;
-	if (!sourceMesh.loadMesh(filenameMesh)) {
-		std::cout << "Mesh file wasn't read successfully at location: " << filenameMesh << std::endl;
-		return -1;
-	}
+		SimpleMesh sourceMesh;
+		if (!sourceMesh.loadMesh(filenameMesh)) {
+			std::cout << "Mesh file wasn't read successfully at location: " << filenameMesh << std::endl;
+			return -1;
+		}
 
-	ArapDeformer deformer(&sourceMesh);
+		ArapDeformer deformer(&sourceMesh);
 	
-	auto t1 = std::chrono::high_resolution_clock::now();
-	deformer.applyDeformation(fixedPoints, handleID, handleMoved, 3); 
-	auto t2 = std::chrono::high_resolution_clock::now();
-	std::chrono::duration<float> eps = t2 - t1;
-	std::cout << "Deformation completed in "<< eps.count() <<" seconds." << std::endl;
+		auto t1 = std::chrono::high_resolution_clock::now();
+		deformer.initDeformation(fixedPoints);
+		deformer.applyDeformation(handleID, handleMoved, 3);
+		auto t2 = std::chrono::high_resolution_clock::now();
+		std::chrono::duration<float> eps = t2 - t1;
+		std::cout << "Deformation completed in "<< eps.count() <<" seconds." << std::endl;
 
-	// sourceMesh.writeMesh("../data/bunny/deformedMesh.off"); 
+		// sourceMesh.writeMesh("../data/bunny/deformedMesh.off"); 
 
 	}
 	return 0;

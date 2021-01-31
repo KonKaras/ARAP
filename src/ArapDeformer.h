@@ -18,9 +18,11 @@ struct Constraint {
 class ArapDeformer {
 
 public:
+    ArapDeformer();
 	ArapDeformer(SimpleMesh *mesh);
-    void applyDeformation(vector<int> fixed_points, int handleID, Vector3f handleNewPosition, int iterations);
+    void initDeformation(vector<int> fixed_points);
     void setHandleConstraint(int handleID, Vector3f newHandlePosition);
+    void applyDeformation(int handleID, Vector3f handleNewPosition, int iterations);
 
 private:
 
