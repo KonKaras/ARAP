@@ -4,12 +4,10 @@
 #include <chrono>
 
 #include "Eigen.h"
-#include "VirtualSensor.h"
 #include "SimpleMesh.h"
-#include "ICPOptimizer.h"
-#include "Arap.h"
-#include "PointCloud.h"
-#include "GUI.h"
+#include <Eigen/Sparse>
+// #include "GUI.h"
+#include "ArapDeformer.h"
 
 
 using namespace std;
@@ -35,38 +33,43 @@ int main() {
 	bool debug = false;
 	if (!debug) {
 		GUI* gui = new GUI(filenameMesh, 3);
+    }
+    else{
+	const std::string filenameMesh = std::string("../data/bunny/test2.off");
+	
+	// GUI* gui = new GUI(filenameMesh, 3);
+	
+	vector<int> fixedPoints;
+	fixedPoints.push_back(0);
+	//fixedPoints.push_back(1);
+	// fixedPoints.push_back(2);
+	// fixedPoints.push_back(3);
+	fixedPoints.push_back(4);
+	// fixedPoints.push_back(5);
+	fixedPoints.push_back(7);
+	fixedPoints.push_back(10);
+	fixedPoints.push_back(14);
+	// fixedPoints.push_back(9);
+	int handleID = 7;
+	Vector3f handleMoved(1, 2, 1);
+
+	
+	SimpleMesh sourceMesh;
+	if (!sourceMesh.loadMesh(filenameMesh)) {
+		std::cout << "Mesh file wasn't read successfully at location: " << filenameMesh << std::endl;
+		return -1;
 	}
-	else {
-		
-		vector<int> fixedPoints; //hier sammeln wir die vertices die sich nciht bewegen durfen
-		//fixedPoints.push_back(0);
-		//fixedPoints.push_back(1);
-		fixedPoints.push_back(2);
-		fixedPoints.push_back(3);
-		//fixedPoints.push_back(4);
-		//fixedPoints.push_back(5);
-		//fixedPoints.push_back(6);
-		fixedPoints.push_back(7);
-		fixedPoints.push_back(8);
-		fixedPoints.push_back(9);
-		int handleID = 9;
-		Vector3f handleMoved(2.750159, 3.652282, 0.25415);
 
+	ArapDeformer deformer(&sourceMesh);
+	
+	auto t1 = std::chrono::high_resolution_clock::now();
+	deformer.applyDeformation(fixedPoints, handleID, handleMoved, 3); 
+	auto t2 = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<float> eps = t2 - t1;
+	std::cout << "Deformation completed in "<< eps.count() <<" seconds." << std::endl;
 
-		SimpleMesh sourceMesh;
-		if (!sourceMesh.loadMesh(filenameMesh, fixedPoints)) { // in loadMesh() finden wichtige vorberechnungen statt
-			std::cout << "Mesh file wasn't read successfully at location: " << filenameMesh << std::endl;
-			return -1;
-		}
+	// sourceMesh.writeMesh("../data/bunny/deformedMesh.off"); 
 
-		auto t1 = std::chrono::high_resolution_clock::now();
-		applyDeformation(&sourceMesh, handleID, handleMoved, 10); // Hier passiert die flipflop optimization mit 3 iterationen
-		auto t2 = std::chrono::high_resolution_clock::now();
-		std::chrono::duration<float> eps = t2 - t1;
-		std::cout << "Deformation completed in "<< eps.count() <<" seconds." << std::endl;
-
-		sourceMesh.writeMesh("../data/bunny/deformedMesh.off");
-		
 	}
 	return 0;
 }
