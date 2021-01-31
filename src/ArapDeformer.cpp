@@ -1,10 +1,17 @@
 #include "ArapDeformer.h"
 
 #define USE_UNIFORM_WEIGHTS false
-#define USE_COTANGENT_WEIGHTS false
-#define USE_CONSTANT_WEIGHTS true
+#define USE_COTANGENT_WEIGHTS true
+#define USE_CONSTANT_WEIGHTS false
 
-#define USE_SPARSE true
+#define USE_SIMPLICIAL_LDLT false
+#define USE_SIMPLICIAL_LLT false
+#define USE_SPARSE_QR false
+#define USE_SPARSE_LU false
+
+#define USE_SPARSE_MATRICES (USE_SIMPLICIAL_LLT || USE_SIMPLICIAL_LDLT || USE_SPARSE_QR || USE_SPARSE_LU)
+
+typedef Eigen::Triplet<double> T;
 
 
 ArapDeformer::ArapDeformer(SimpleMesh *mesh) {
@@ -12,8 +19,7 @@ ArapDeformer::ArapDeformer(SimpleMesh *mesh) {
     m_num_p = m_mesh.getNumberOfFaces();
     m_num_v = m_mesh.getNumberOfVertices();
     m_cell_rotations = std::vector<MatrixXf>(m_num_v);
-    m_b = MatrixXf::Zero(m_num_v, 3);
-    m_system_matrix = MatrixXf::Zero(m_num_v, m_num_v);
+    m_b = MatrixXf::Zero(m_num_v, 3);    
 
     for (int i = 0; i < m_num_v; i++) {
         m_cell_rotations[i] = MatrixXf::Zero(3, 3);
@@ -25,7 +31,7 @@ ArapDeformer::ArapDeformer(SimpleMesh *mesh) {
 void ArapDeformer::setHandleConstraint(int handleID, Vector3f newHandlePosition){
     for (int i = 0; i < m_constraints.size(); ++i) {
         if (m_constraints[i].vertexID == handleID) {
-            cout<<"Setting handle constraint"<<endl;
+            std::cout<<"Setting handle constraint"<<endl;
             m_constraints[i].position = newHandlePosition;
         }
     }
@@ -106,15 +112,80 @@ void ArapDeformer::updateB(){
 
 
 void ArapDeformer::estimateVertices(){
-    MatrixXf system_matrix = m_system_matrix;
-    cout<<"Solving LES ..." <<endl;
-    static JacobiSVD<Eigen::MatrixXf> svd(system_matrix, Eigen::ComputeThinU | Eigen::ComputeThinV);
-    MatrixXf result = svd.solve(m_b);
-    cout<<"m_b"<<m_b<<endl;
-    cout<<"Done!"<<endl;
-    cout<<"Result:" <<endl;
-    cout<<result<<endl;
-    m_mesh.setPPrime(result); 
+    std::cout<<"Solving LES ..." <<endl;
+    MatrixXf result;
+    if(!USE_SPARSE_MATRICES){
+         MatrixXf system_matrix = m_system_matrix;
+         static JacobiSVD<Eigen::MatrixXf> svd(system_matrix, Eigen::ComputeThinU | Eigen::ComputeThinV);
+         result = svd.solve(m_b);
+         m_mesh.setPPrime(result);
+    }
+    else{
+        if(USE_SIMPLICIAL_LDLT){
+            SimplicialLDLT<SparseMatrix<float>> solver;
+            solver.compute(m_system_matrix_sparse);
+            if(solver.info()!=Success) {
+                cout<<"Decomposition failed!"<<endl;
+                return;
+            }
+            result = solver.solve(m_b);
+            if(solver.info()!=Success) {
+                cout<<"Solving failed"<<endl;
+                return;
+            }
+            std::cout<<"Result:" <<endl;
+            std::cout<<result<<endl;
+            m_mesh.setPPrime(result); 
+        }
+        else if(USE_SIMPLICIAL_LLT){
+            SimplicialLLT<SparseMatrix<float>, Lower, NaturalOrdering<int>> solver;
+            solver.compute(m_system_matrix_sparse);
+            if(solver.info()!=Success) {
+                cout<<"Decomposition failed!"<<endl;
+                return;
+            }
+            result = solver.solve(m_b);
+            if(solver.info()!=Success) {
+                cout<<"Solving failed"<<endl;
+                return;
+            }
+            m_mesh.setPPrime(result);
+        }
+        else if(USE_SPARSE_LU){
+            SparseLU<SparseMatrix<float>> solver;
+            solver.compute(m_system_matrix_sparse);
+            if(solver.info()!=Success) {
+                cout<<"Decomposition failed!"<<endl;
+                return;
+            }
+            result = solver.solve(m_b);
+            if(solver.info()!=Success) {
+                cout<<"Solving failed"<<endl;
+                return;
+            }
+            m_mesh.setPPrime(result);
+        }
+        else if (USE_SPARSE_QR){
+            SparseQR<SparseMatrix<float>, COLAMDOrdering<int>> solver;
+            m_system_matrix_sparse.makeCompressed();
+            solver.compute(m_system_matrix_sparse);
+            if(solver.info()!=Success) {
+                cout<<"Decomposition failed!"<<endl;
+                return;
+            }
+            result = solver.solve(m_b);
+            if(solver.info()!=Success) {
+                cout<<"Solving failed"<<endl;
+                return;
+            }
+            m_mesh.setPPrime(result);
+        }
+        else{
+            cout<<"No decomposition chosen!"<<endl;
+            return;
+        }
+    }
+    std::cout<<"Done!"<<endl;
 }
 
 
@@ -136,16 +207,16 @@ float ArapDeformer::calculateEnergy(){
 }
 
 void ArapDeformer::buildWeightMatrix(){
-    cout << "Generating Weight Matrix" << endl;
+    std::cout << "Generating Weight Matrix" << endl;
     if(USE_CONSTANT_WEIGHTS){
-        cout << "Using constant weights" << endl;
+        std::cout << "Using constant weights" << endl;
         m_weight_matrix = MatrixXf::Ones(m_num_v, m_num_v);
     }
     else{
         m_weight_matrix = MatrixXf::Zero(m_num_v, m_num_v);
         for (int i = 0; i < m_num_v; i++) {
             if(USE_UNIFORM_WEIGHTS){
-                cout << "Using uniform weights" << endl;
+                std::cout << "Using uniform weights" << endl;
                 float weight_ij = m_mesh.computeUniformWeightForVertex(i);
                 vector<int> neighbors = m_mesh.getNeighborsOf(i);
                 for (int j : neighbors){
@@ -153,7 +224,7 @@ void ArapDeformer::buildWeightMatrix(){
                 }
             }
             if (USE_COTANGENT_WEIGHTS){
-                cout << "Using cotangent weights" << endl;
+                std::cout << "Using cotangent weights" << endl;
                 vector<int> neighbors = m_mesh.getNeighborsOf(i);
                 for (int j : neighbors){
                     float weight_ij = 0;
@@ -168,27 +239,31 @@ void ArapDeformer::buildWeightMatrix(){
         }
     }
     
-    cout<<"Weight matrix: "<<m_weight_matrix<<endl;
+    std::cout<<"Weight matrix: "<<m_weight_matrix<<endl;
 } 
 
 
 void ArapDeformer::calculateSystemMatrix(){
+    m_system_matrix = MatrixXf::Zero(m_num_v, m_num_v);
     for (int i = 0; i < m_num_v; i++) {
         vector<int> neighbors = m_mesh.getNeighborsOf(i);
         int numNeighbors = neighbors.size();
-        for (int j = 0; j < numNeighbors; ++j)
-        {
+        for (int j = 0; j < numNeighbors; ++j){
             int neighborVertex = neighbors[j];
             m_system_matrix(i, i) += m_weight_matrix(i, neighborVertex);
             m_system_matrix(i, neighborVertex) = -m_weight_matrix(i, neighborVertex);
         }
     }
-
+   
     for (Constraint c : m_constraints) {
         int i = c.vertexID;
         m_system_matrix.row(i).setZero();
         m_system_matrix(i, i) = 1;
     }
+
+    if (USE_SPARSE_MATRICES)
+        m_system_matrix_sparse = m_system_matrix.sparseView();
+
 }
 
 void ArapDeformer::applyDeformation(vector<int> fixed_points, int handleID, Vector3f handleNewPosition, int iterations){
@@ -205,30 +280,32 @@ void ArapDeformer::applyDeformation(vector<int> fixed_points, int handleID, Vect
     m_new_handle_position = handleNewPosition;
     calculateSystemMatrix();
 
-    cout << "handleID " << m_handle_id << endl;
-    cout << "# fixed Vertices " << m_constraints.size() << endl;
+    std::cout << "handleID " << m_handle_id << endl;
+    std::cout << "# fixed Vertices " << m_constraints.size() << endl;
+    std::cout <<"Using sparse matrices: "<<USE_SPARSE_MATRICES<<endl;
+    std::cout << "NonZeros in sparse matrix: "<<m_system_matrix_sparse.nonZeros()<<endl;
 
     setHandleConstraint(handleID, handleNewPosition);
     float energy=999.0f;
     int iter=0;
-    cout<<"Applying deformation for handle with ID " << handleID << " to new position " << handleNewPosition.x() <<","<< handleNewPosition.y()<< ","<< handleNewPosition.z()<<endl;
+    std::cout<<"Applying deformation for handle with ID " << handleID << " to new position " << handleNewPosition.x() <<","<< handleNewPosition.y()<< ","<< handleNewPosition.z()<<endl;
 
     while(iter < iterations && abs(energy) > THRESHOLD){
-        cout<<"[Iteration "<<iter<<"]"<<endl;
+        std::cout<<"[Iteration "<<iter<<"]"<<endl;
 
         estimateRotation();
         updateB();
         estimateVertices();
 
         float energy_i = calculateEnergy();        
-        cout<< "Iteration: "<< iter<< "  Local error: "<< energy_i << endl;
+        std::cout<< "Iteration: "<< iter<< "  Local error: "<< energy_i << endl;
 
         m_mesh.copyPPrime(); 
 
         energy = energy_i;
         iter++;
     }
-    cout << "Resulting energy: "<< energy<< endl; 
-    cout << "PPrime[handleID] is "<< m_mesh.getDeformedVertex(handleID).x() <<","<< m_mesh.getDeformedVertex(handleID).y()<< ","<< m_mesh.getDeformedVertex(handleID).z()<<endl;
+    std::cout << "Resulting energy: "<< energy<< endl; 
+    std::cout << "PPrime[handleID] is "<< m_mesh.getDeformedVertex(handleID).x() <<","<< m_mesh.getDeformedVertex(handleID).y()<< ","<< m_mesh.getDeformedVertex(handleID).z()<<endl;
     m_mesh.writeMesh("../data/bunny/deformedMesh.off"); 
 }

@@ -37,6 +37,7 @@ private:
     vector<MatrixXf> m_cell_rotations;
     MatrixXf m_system_matrix;
     MatrixXf m_weight_matrix;
+    SparseMatrix<float> m_system_matrix_sparse;
     int m_num_v;
     int m_num_p;
     MatrixXf m_b;

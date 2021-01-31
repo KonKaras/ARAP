@@ -168,6 +168,11 @@ public:
 		m_neighbor_matrix(v3, v1) = 1;
 		m_neighbor_matrix(v2, v3) = 1;
 		m_neighbor_matrix(v3, v2) = 1;
+		m_nonzero_neighbor_matrix += 6;
+	}
+
+	int getNonZeroNeighborMatrixEntries(){
+		return m_nonzero_neighbor_matrix;
 	}
 
 	//retrun true if both i and j are part of face f
@@ -320,6 +325,7 @@ private:
 	vector<std::vector<unsigned int>> m_vertices_to_faces;
 	int m_num_v;
 	int m_num_p;
+	int m_nonzero_neighbor_matrix = 0;
 
 
 	/**
