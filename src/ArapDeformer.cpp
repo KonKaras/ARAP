@@ -7,7 +7,7 @@
 #define USE_SIMPLICIAL_LDLT false
 #define USE_SIMPLICIAL_LLT false
 #define USE_SPARSE_QR false
-#define USE_SPARSE_LU false
+#define USE_SPARSE_LU true
 
 #define USE_SPARSE_MATRICES (USE_SIMPLICIAL_LLT || USE_SIMPLICIAL_LDLT || USE_SPARSE_QR || USE_SPARSE_LU)
 
@@ -26,6 +26,7 @@ ArapDeformer::ArapDeformer(SimpleMesh *mesh) {
     }
 
     buildWeightMatrix();
+    calculateSystemMatrix();
 }
 
 void ArapDeformer::setHandleConstraint(int handleID, Vector3f newHandlePosition){
@@ -255,6 +256,22 @@ void ArapDeformer::calculateSystemMatrix(){
         }
     }
    
+    // for (Constraint c : m_constraints) {
+    //     int i = c.vertexID;
+    //     m_system_matrix.row(i).setZero();
+    //     m_system_matrix(i, i) = 1;
+    // }
+
+    m_system_matrix_original = m_system_matrix;
+
+    // if (USE_SPARSE_MATRICES)
+    //     m_system_matrix_sparse = m_system_matrix.sparseView();
+
+}
+
+void ArapDeformer::updateSystemMatrix(){
+
+    m_system_matrix = m_system_matrix_original;
     for (Constraint c : m_constraints) {
         int i = c.vertexID;
         m_system_matrix.row(i).setZero();
@@ -263,22 +280,23 @@ void ArapDeformer::calculateSystemMatrix(){
 
     if (USE_SPARSE_MATRICES)
         m_system_matrix_sparse = m_system_matrix.sparseView();
-
 }
 
 void ArapDeformer::applyDeformation(vector<int> fixed_points, int handleID, Vector3f handleNewPosition, int iterations){
 
+    m_constraints.clear();
     for (int i : fixed_points) {
         Constraint c;
         c.vertexID = i;
         c.position = m_mesh.getVertex(i);
         m_constraints.push_back(c);
     }
+    updateSystemMatrix();
 
 
     m_handle_id = handleID;
     m_new_handle_position = handleNewPosition;
-    calculateSystemMatrix();
+    // calculateSystemMatrix();
 
     std::cout << "handleID " << m_handle_id << endl;
     std::cout << "# fixed Vertices " << m_constraints.size() << endl;

@@ -58,6 +58,26 @@ int main() {
 	
 	auto t1 = std::chrono::high_resolution_clock::now();
 	deformer.applyDeformation(fixedPoints, handleID, handleMoved, 3); 
+
+	fixedPoints.clear();
+	fixedPoints.push_back(0);
+	//fixedPoints.push_back(1);
+	// fixedPoints.push_back(2);
+	// fixedPoints.push_back(3);
+	fixedPoints.push_back(4);
+	// fixedPoints.push_back(5);
+	fixedPoints.push_back(7);
+	fixedPoints.push_back(10);
+	fixedPoints.push_back(14);
+	// fixedPoints.push_back(9);
+	handleID = 0;
+	handleMoved.x() = 0;
+	handleMoved.y() = 0;
+	handleMoved.z() = 2;
+
+	deformer.applyDeformation(fixedPoints, handleID, handleMoved, 3);
+
+
 	auto t2 = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<float> eps = t2 - t1;
 	std::cout << "Deformation completed in "<< eps.count() <<" seconds." << std::endl;
