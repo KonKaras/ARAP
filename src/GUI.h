@@ -197,7 +197,7 @@ private:
 		//only run algorithm if initialized and not already running
 		if (arapInitialized && !arapRunning) {
 			arapRunning = true;
-			deformer.applyDeformation(GetStaticVerticesFromFaces(), currentMovingHandle, handlePos, num_iterations); // Hier passiert die flipflop optimization mit 3 iterationen
+			deformer.applyDeformation(GetStaticVerticesFromFaces(), currentMovingHandle, handlePos.cast<double>(), num_iterations); // Hier passiert die flipflop optimization mit 3 iterationen
 			std::vector<Vertex> deformedVertices = deformer.m_mesh.getVertices();
 			sourceMesh = deformer.m_mesh;
 			cout << "GUI[handleID] is " << deformedVertices[currentMovingHandle].position.x() << "," << deformedVertices[currentMovingHandle].position.y() << "," << deformedVertices[currentMovingHandle].position.z() << endl;

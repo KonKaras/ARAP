@@ -8,7 +8,7 @@ using namespace std;
 
 struct Vertex {
 	// Position stored as 3 floats
-	Vector3f position;
+	Vector3d position;
 	// Color stored as 4 unsigned char
 	Vector4uc color;
 };
@@ -30,7 +30,7 @@ class SimpleMesh {
 public:
 	SimpleMesh(){
 	}
-	MatrixXf m_b;
+	MatrixXd m_b;
 
 	void clear() {
 		m_vertices.clear();
@@ -97,7 +97,7 @@ public:
 			for (unsigned int i = 0; i < numV; i++) {
 				Vertex v;
 
-				v.position = verticesFromViewer.row(i).cast<float>();
+				v.position = verticesFromViewer.row(i).cast<double>();
 
 				m_vertices.push_back(v);
 				m_vertices_prime.push_back(v);
@@ -110,12 +110,12 @@ public:
 		}
 
 		//Speicherallokation der wichtigen Matrizen und Listen
-		m_neighbor_matrix = MatrixXf::Zero(m_num_v, m_num_v); // Element (i,j)=1, wenn i und j nachbarb, sonst 0
+		m_neighbor_matrix = MatrixXd::Zero(m_num_v, m_num_v); // Element (i,j)=1, wenn i und j nachbarb, sonst 0
 		m_vertices_to_faces = std::vector<std::vector<unsigned int>>(m_num_v); //vtf[i] contains the face IDs that contain vertex ID i
-		//m_cellRotations = std::vector<MatrixXf>(m_numV); // eine rotationsmatrix pro vertex
-		//m_precomputedPMatrices = vector<MatrixXf>(m_numV); // Vorberechnung der P matrix (paper seite 4 anfang)
+		//m_cellRotations = std::vector<MatrixXd>(m_numV); // eine rotationsmatrix pro vertex
+		//m_precomputedPMatrices = vector<MatrixXd>(m_numV); // Vorberechnung der P matrix (paper seite 4 anfang)
 		m_triangles = vector<Triangle>(numP);
-		m_b = MatrixXf::Zero(m_num_v, 3);
+		m_b = MatrixXd::Zero(m_num_v, 3);
 
 		// Read faces (i.e. triangles).
 		for (unsigned int i = 0; i < numP; i++) {
@@ -139,7 +139,7 @@ public:
 		}
 
 		/*for (int i = 0; i < numV; i++) {
-			m_cellRotations[i] = MatrixXf::Zero(3, 3);
+			m_cellRotations[i] = MatrixXd::Zero(3, 3);
 		}*/
 
 		cout << "numVertices: " << numV << endl;
@@ -218,7 +218,7 @@ public:
 		}
 		
 
-		m_neighbor_matrix = MatrixXf::Zero(m_num_v, m_num_v); 
+		m_neighbor_matrix = MatrixXd::Zero(m_num_v, m_num_v); 
 		m_vertices_to_faces = std::vector<std::vector<unsigned int>>(m_num_v); //vtf[i] contains the face IDs that contain vertex ID i
 		m_triangles = vector<Triangle>(num_p);
 
@@ -243,7 +243,7 @@ public:
 		return true;
 	}
     /*
-	void setHandleConstraint(int handleID, Vector3f newHandlePosition) {
+	void setHandleConstraint(int handleID, Vector3d newHandlePosition) {
 		for (int i = 0; i < m_constraints.size(); ++i) {
 			if (m_constraints[i].vertexID == handleID) {
 				m_constraints[i].position = newHandlePosition;
@@ -253,7 +253,7 @@ public:
 	}
 
 
-	Vector3f getConstraintI(int id) {
+	Vector3d getConstraintI(int id) {
 		for (Constraint c : m_constraints) {
 			if (c.vertexID == id) {
 				return c.position;
@@ -308,11 +308,11 @@ public:
 		return neighbors;
 	}
 
-	Vector3f getVertex(int i) {
+	Vector3d getVertex(int i) {
 		return m_vertices[i].position;
 	}
 
-	Vector3f getDeformedVertex(int i) {
+	Vector3d getDeformedVertex(int i) {
 		return m_vertices_prime[i].position;
 	}
 
@@ -324,7 +324,7 @@ public:
 		return m_num_p;
 	}
 
-	void setPPrime(MatrixXf pprime) {
+	void setPPrime(MatrixXd pprime) {
 		for (int i = 0; i < m_num_v; i++) {
 			Vertex v;
 			v.position.x() = pprime(i, 0);
@@ -334,7 +334,7 @@ public:
 		}
 	}
 
-	void setPPrime(int index, Vector3f position) {
+	void setPPrime(int index, Vector3d position) {
 		m_vertices_prime[index].position = position;
 	}
 
@@ -358,14 +358,14 @@ public:
 		return -1;
 	}
 
-	float computeUniformWeightForVertex(int i){
+	double computeUniformWeightForVertex(int i){
 		vector<int> neighbors_i = getNeighborsOf(i);
-		float wij = 1 / (float) neighbors_i.size();
-		cout<<"Uniform weight for vertex "<<i<<" with "<<neighbors_i.size() <<" is : "<<wij<<endl;
+		double wij = 1 / (double) neighbors_i.size();
+		//cout<<"Uniform weight for vertex "<<i<<" with "<<neighbors_i.size() <<" is : "<<wij<<endl;
 		return wij;
 	}
 
-	float computeCotangentWeightForPair(int i, int j) {
+	double computeCotangentWeightForPair(int i, int j) {
 		vector<Triangle> local_faces;
 		for (unsigned int id : m_vertices_to_faces[i]) {
 			Triangle f = m_triangles[id];
@@ -378,14 +378,14 @@ public:
 		Vertex vertex_j = m_vertices[j];
 
 		// Using the following weights: 0.5 * (cot(alpha) + cot(beta))
-		float cot_theta_sum = 0.0f;
+		double cot_theta_sum = 0.0f;
 
 		for (Triangle f : local_faces) {
 			int other_vertex_id = getThirdFacePoint(i, j, f);
 			Vertex vertex_o = m_vertices[other_vertex_id];
-			float theta = cotan(vertex_i.position - vertex_o.position, vertex_j.position - vertex_o.position); 
-			// float theta = angleBetweenVectors(vertex_i.position - vertex_o.position, vertex_j.position - vertex_o.position); 
-			cout<<"Theta for i "<<i<<" and j "<<j<<" and other v "<<other_vertex_id<<" = "<<theta<<endl;
+			double theta = cotan(vertex_i.position - vertex_o.position, vertex_j.position - vertex_o.position); 
+			// double theta = angleBetweenVectors(vertex_i.position - vertex_o.position, vertex_j.position - vertex_o.position); 
+			//cout<<"Theta for i "<<i<<" and j "<<j<<" and other v "<<other_vertex_id<<" = "<<theta<<endl;
 			// cot_theta_sum += (1 / tan(theta));
 			cot_theta_sum += theta;
 		}
@@ -393,13 +393,13 @@ public:
 		return cot_theta_sum * 0.5f;
 	}
 
-	float cotan(Vector3f a, Vector3f b){
+	double cotan(Vector3d a, Vector3d b){
     	return (a.dot(b)) / (a.cross(b)).norm();
 	}
 
 	/*void calculateSystemMatrix() {
 
-		m_systemMatrix = MatrixXf::Zero(m_numV, m_numV);
+		m_systemMatrix = MatrixXd::Zero(m_numV, m_numV);
 		for (int i = 0; i < m_numV; i++) {
 			vector<int> neighbors = getNeighborsOf(i);
 			int numNeighbors = neighbors.size();
@@ -418,7 +418,7 @@ public:
 		}
     }*/
     
-	double angleBetweenVectors(Vector3f a, Vector3f b) {
+	double angleBetweenVectors(Vector3d a, Vector3d b) {
 		return acos((a).dot(b) / (a.norm() * b.norm())) * 180 / M_PI;
 	}
 
@@ -458,7 +458,7 @@ private:
 	vector<Vertex> m_vertices;
 	vector<Vertex> m_vertices_prime;
 	vector<Triangle> m_triangles;
-	MatrixXf m_neighbor_matrix;
+	MatrixXd m_neighbor_matrix;
 	vector<std::vector<unsigned int>> m_vertices_to_faces;
 	int m_num_v;
 	int m_num_p;
@@ -468,26 +468,26 @@ private:
 	/**
 	 * Returns a rotation that transforms vector vA into vector vB.
 	 */
-	static Matrix3f face(const Vector3f& vA, const Vector3f& vB) {
+	static Matrix3d face(const Vector3d& vA, const Vector3d& vB) {
 		auto a = vA.normalized();
 		auto b = vB.normalized();
 		auto axis = b.cross(a);
-		float angle = acosf(a.dot(b));
+		double angle = acosf(a.dot(b));
 
 		if (angle == 0.0f) {  // No rotation
-			return Matrix3f::Identity();
+			return Matrix3d::Identity();
 		}
 
 		// Convert the rotation from SO3 to matrix notation.
 		// First we create a skew symetric matrix from the axis vector.
-		Matrix3f skewSymetricMatrix;
+		Matrix3d skewSymetricMatrix;
 		skewSymetricMatrix.setIdentity();
 		skewSymetricMatrix(0, 0) = 0;			skewSymetricMatrix(0, 1) = -axis.z();	skewSymetricMatrix(0, 2) = axis.y();
 		skewSymetricMatrix(1, 0) = axis.z();	skewSymetricMatrix(1, 1) = 0;			skewSymetricMatrix(1, 2) = -axis.x();
 		skewSymetricMatrix(2, 0) = -axis.y();	skewSymetricMatrix(2, 1) = axis.x();	skewSymetricMatrix(2, 2) = 0;
 
 		// We compute a rotation matrix using Rodrigues formula.
-		Matrix3f rotation = Matrix3f::Identity() + sinf(angle) * skewSymetricMatrix + (1 - cos(angle)) * skewSymetricMatrix * skewSymetricMatrix;
+		Matrix3d rotation = Matrix3d::Identity() + sinf(angle) * skewSymetricMatrix + (1 - cos(angle)) * skewSymetricMatrix * skewSymetricMatrix;
 
 		return rotation;
 	}

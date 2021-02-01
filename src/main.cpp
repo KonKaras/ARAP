@@ -30,10 +30,10 @@ int main() {
 	 ***/
 
 	// Load the source and target mesh.
-	const std::string filenameMesh = std::string("../data/bunny/test.off");
+	const std::string filenameMesh = std::string("../data/bunny/bunny1000.off");
 	bool debug = false;
 	if (!debug) {
-		GUI* gui = new GUI(filenameMesh, 10);
+		GUI* gui = new GUI(filenameMesh, 3);
     }
     else{
 		vector<int> fixedPoints;
@@ -48,7 +48,7 @@ int main() {
 		//fixedPoints.push_back(14);
 		// fixedPoints.push_back(9);
 		int handleID = 7;
-		Vector3f handleMoved(1, 2, 1);
+		Vector3d handleMoved(1, 2, 1);
 
 	
 		SimpleMesh sourceMesh;
@@ -76,11 +76,11 @@ int main() {
 		//fixedPoints.push_back(14);
 		// fixedPoints.push_back(9);
 		handleID = 7;
-		handleMoved = Vector3f(1, 2, 2);
+		handleMoved = Vector3d(1, 2, 2);
 		//deformer.initDeformation(fixedPoints);
 		deformer.applyDeformation(fixedPoints, handleID, handleMoved, 3);
 		auto t2 = std::chrono::high_resolution_clock::now();
-		std::chrono::duration<float> eps = t2 - t1;
+		std::chrono::duration<double> eps = t2 - t1;
 		std::cout << "Deformation completed in "<< eps.count() <<" seconds." << std::endl;
 
 		// sourceMesh.writeMesh("../data/bunny/deformedMesh.off"); 
