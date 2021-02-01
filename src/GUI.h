@@ -39,6 +39,7 @@ private:
 	bool vertexHit = false;
 	bool arapInitialized = false;
 	bool arapRunning = false;
+	bool deformerInitiated = false;
 
 	int currentMouseButton = 0;
 	int currentMovingHandle = -1;
@@ -228,7 +229,10 @@ private:
 				std::cout << "Mesh file wasn't read successfully at location: " << meshName << std::endl;
 				return;
 			}
-			deformer = ArapDeformer(&sourceMesh);
+			if (!deformerInitiated) {
+				deformer = ArapDeformer(&sourceMesh);
+				deformerInitiated = true;
+			}
 			deformer.initDeformation(staticsAsVector);
 			staticFacesPreviousInit = staticFaces;
 			handlesPreviousInit = handles;
