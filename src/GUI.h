@@ -198,7 +198,7 @@ private:
 			arapRunning = true;
 			deformer.applyDeformation(currentMovingHandle, handlePos, num_iterations); // Hier passiert die flipflop optimization mit 3 iterationen
 			std::vector<Vertex> deformedVertices = deformer.m_mesh.getVertices();
-			sourceMesh = deformer.m_mesh;
+			//sourceMesh = deformer.m_mesh;
 			cout << "GUI[handleID] is " << deformedVertices[currentMovingHandle].position.x() << "," << deformedVertices[currentMovingHandle].position.y() << "," << deformedVertices[currentMovingHandle].position.z() << endl;
 			//MatrixXd deformedVerticesMat(deformedVertices.size(), 3);
 			for (int i = 0; i < vertices.rows(); i++) {
@@ -224,7 +224,7 @@ private:
 
 			sourceMesh = SimpleMesh();
 			
-			if (!sourceMesh.loadMeshFromGUI(vertices, faces, staticsAsVector)) { // in loadMesh() finden wichtige vorberechnungen statt
+			if (!sourceMesh.loadMeshFromGUI(vertices, faces)) { // in loadMesh() finden wichtige vorberechnungen statt
 				std::cout << "Mesh file wasn't read successfully at location: " << meshName << std::endl;
 				return;
 			}

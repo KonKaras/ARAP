@@ -113,10 +113,10 @@ void ArapDeformer::estimateVertices(){
     cout<<"Solving LES ..." <<endl;
     static JacobiSVD<Eigen::MatrixXf> svd(system_matrix, Eigen::ComputeThinU | Eigen::ComputeThinV);
     MatrixXf result = svd.solve(m_b);
-    cout<<"m_b"<<m_b<<endl;
+    //cout<<"m_b"<<m_b<<endl;
     cout<<"Done!"<<endl;
     cout<<"Result:" <<endl;
-    cout<<result<<endl;
+    //cout<<result<<endl;
     m_mesh.setPPrime(result); 
 }
 
@@ -203,7 +203,6 @@ void ArapDeformer::initDeformation(vector<int> fixed_points){
         c.position = m_mesh.getVertex(i);
         m_constraints.push_back(c);
     }
-
     calculateSystemMatrix();
 }
 

@@ -70,7 +70,7 @@ public:
 		return m_triangles;
 	}
 	
-	bool loadMeshFromGUI(MatrixXd verticesFromViewer, MatrixXi facesFromViewer, vector<int> fixedPoints){
+	bool loadMeshFromGUI(MatrixXd verticesFromViewer, MatrixXi facesFromViewer){
 		// Read off file (Important: Only .off files are supported).
 		m_vertices.clear();
 		m_vertices_prime.clear();
