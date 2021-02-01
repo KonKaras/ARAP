@@ -389,8 +389,10 @@ public:
 			// cot_theta_sum += (1 / tan(theta));
 			cot_theta_sum += theta;
 		}
-
-		return cot_theta_sum * 0.5f;
+		if (cot_theta_sum < 0) {
+			cot_theta_sum = 0;
+		}
+		return abs(cot_theta_sum) * 0.5f;
 	}
 
 	double cotan(Vector3d a, Vector3d b){

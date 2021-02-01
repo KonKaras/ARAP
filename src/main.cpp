@@ -30,7 +30,7 @@ int main() {
 	 ***/
 
 	// Load the source and target mesh.
-	const std::string filenameMesh = std::string("../data/bunny/bunny1000.off");
+	const std::string filenameMesh = std::string("../data/bunny/cactus600.off");
 	bool debug = false;
 	if (!debug) {
 		GUI* gui = new GUI(filenameMesh, 3);

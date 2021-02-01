@@ -6,8 +6,8 @@
 
 #define USE_SIMPLICIAL_LDLT false
 #define USE_SIMPLICIAL_LLT false
-#define USE_SPARSE_QR true
-#define USE_SPARSE_LU false
+#define USE_SPARSE_QR false
+#define USE_SPARSE_LU true
 
 #define USE_SPARSE_MATRICES (USE_SIMPLICIAL_LLT || USE_SIMPLICIAL_LDLT || USE_SPARSE_QR || USE_SPARSE_LU)
 
