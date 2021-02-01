@@ -60,8 +60,8 @@ int main() {
 		ArapDeformer deformer(&sourceMesh);
 	
 		auto t1 = std::chrono::high_resolution_clock::now();
-		deformer.initDeformation(fixedPoints);
-		deformer.applyDeformation(handleID, handleMoved, 3);
+		//deformer.initDeformation(fixedPoints);
+		deformer.applyDeformation(fixedPoints, handleID, handleMoved, 3);
 		deformer.m_mesh.writeMesh("../data/bunny/deformedMesh1.off");
 
 		fixedPoints.clear();
@@ -77,8 +77,8 @@ int main() {
 		// fixedPoints.push_back(9);
 		handleID = 7;
 		handleMoved = Vector3f(1, 2, 2);
-		deformer.initDeformation(fixedPoints);
-		deformer.applyDeformation(handleID, handleMoved, 3);
+		//deformer.initDeformation(fixedPoints);
+		deformer.applyDeformation(fixedPoints, handleID, handleMoved, 3);
 		auto t2 = std::chrono::high_resolution_clock::now();
 		std::chrono::duration<float> eps = t2 - t1;
 		std::cout << "Deformation completed in "<< eps.count() <<" seconds." << std::endl;

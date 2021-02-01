@@ -14,6 +14,7 @@
 typedef Eigen::Triplet<double> T;
 
 ArapDeformer::ArapDeformer(){}
+
 ArapDeformer::ArapDeformer(SimpleMesh *mesh) {
     m_mesh = *mesh;
     m_num_p = m_mesh.getNumberOfFaces();
@@ -30,7 +31,7 @@ ArapDeformer::ArapDeformer(SimpleMesh *mesh) {
 }
 
 void ArapDeformer::setHandleConstraint(int handleID, Vector3f newHandlePosition){
-    for (int i = 0; i < m_constraints.size(); ++i) {
+    for (int i = 0; i < m_constraints.size(); i++) {
         if (m_constraints[i].vertexID == handleID) {
             std::cout<<"Setting handle constraint"<<endl;
             m_constraints[i].position = newHandlePosition;
@@ -284,8 +285,6 @@ void ArapDeformer::updateSystemMatrix(){
 
 void ArapDeformer::initDeformation(vector<int> fixed_points){
     m_constraints.clear();
-
-    m_constraints.clear();
     for (int i : fixed_points) {
         Constraint c;
         c.vertexID = i;
@@ -297,7 +296,17 @@ void ArapDeformer::initDeformation(vector<int> fixed_points){
     calculateSystemMatrix();
 }
 
-void ArapDeformer::applyDeformation(int handleID, Vector3f handleNewPosition, int iterations) {
+void ArapDeformer::applyDeformation(vector<int> fixed_points, int handleID, Vector3f handleNewPosition, int iterations) {
+    m_constraints.clear();
+
+    for (int i : fixed_points) {
+        Constraint c;
+        c.vertexID = i;
+        c.position = m_mesh.getVertex(i);
+        m_constraints.push_back(c);
+    }
+
+    updateSystemMatrix();
 
     m_handle_id = handleID;
     m_new_handle_position = handleNewPosition;
