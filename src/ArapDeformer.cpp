@@ -42,7 +42,7 @@ void ArapDeformer::setHandleConstraint(int handleID, Vector3f newHandlePosition)
 
 void ArapDeformer::estimateRotation(){
 
-    // #pragma omp parallel for
+    #pragma omp parallel for
     for(int vertexID=0; vertexID< m_num_v; vertexID++){
         Matrix3f rotation = Matrix3f::Identity();
         vector<int> neighbors = m_mesh.getNeighborsOf(vertexID);
@@ -219,7 +219,7 @@ void ArapDeformer::buildWeightMatrix(){
     }
     else{
         m_weight_matrix = MatrixXf::Zero(m_num_v, m_num_v);
-        // #pragma omp parallel for
+        #pragma omp parallel for
         for (int i = 0; i < m_num_v; i++) {
             if(USE_UNIFORM_WEIGHTS){
                 // std::cout << "Using uniform weights" << endl;
@@ -251,7 +251,7 @@ void ArapDeformer::buildWeightMatrix(){
 
 void ArapDeformer::calculateSystemMatrix(){
     m_system_matrix = MatrixXf::Zero(m_num_v, m_num_v);
-    // #pragma omp parallel for
+    #pragma omp parallel for
     for (int i = 0; i < m_num_v; i++) {
         // cout<<"OpenMP Thread "<<omp_get_thread_num()<<endl;
         vector<int> neighbors = m_mesh.getNeighborsOf(i);
