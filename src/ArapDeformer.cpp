@@ -42,7 +42,7 @@ void ArapDeformer::setWeightType(int weight_type) {
 }
 
 void ArapDeformer::setDecompositionType(int estimation_type) {
-    if (estimation_type == 0) {
+    /*if (estimation_type == 0) {
         use_simplicial_ldlt = true;
         use_simplicial_llt = false;
         use_sparse_qr = false;
@@ -54,13 +54,14 @@ void ArapDeformer::setDecompositionType(int estimation_type) {
         use_sparse_qr = false;
         use_sparse_lu = false;
     }
-    else if (estimation_type == 2) {
+    else */
+    if (estimation_type == 0) {
         use_simplicial_ldlt = false;
         use_simplicial_llt = false;
         use_sparse_qr = true;
         use_sparse_lu = false;
     }
-    else if(estimation_type == 3) {
+    else if(estimation_type == 1) {
         use_simplicial_ldlt = false;
         use_simplicial_llt = false;
         use_sparse_qr = false;
@@ -174,7 +175,7 @@ void ArapDeformer::estimateVertices(){
          m_mesh.setPPrime(result);
     }
     else{
-        if(use_simplicial_ldlt){
+        /*if(use_simplicial_ldlt){
             SimplicialLDLT<SparseMatrix<double>> solver;
             solver.compute(m_system_matrix_sparse);
             if(solver.info()!=Success) {
@@ -204,7 +205,8 @@ void ArapDeformer::estimateVertices(){
             }
             m_mesh.setPPrime(result);
         }
-        else if(use_sparse_lu){
+        else */
+        if(use_sparse_lu){
             SparseLU<SparseMatrix<double>> solver;
             solver.compute(m_system_matrix_sparse);
             if(solver.info()!=Success) {

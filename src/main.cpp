@@ -48,7 +48,7 @@ int main() {
 	std::cin >> weight_type;
 
 	int estimation_type;
-	std::cout << "Choose type of matrix decomposition (0 = simplicial LDLT, 1 = simplicial LLT, 2 = sparse QR, 3 = sparse LU)" << std::endl;
+	std::cout << "Choose type of matrix decomposition (0 = sparse QR, 1 = sparse LU)" << std::endl;
 	std::cin >> estimation_type;
 
 	bool debug = false;
