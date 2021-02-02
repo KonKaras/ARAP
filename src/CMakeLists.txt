@@ -56,11 +56,13 @@ set(HEADER_FILES
     FreeImageHelper.h
     GUI.h
     ArapDeformer.h
+    LibiglArap.h
 )
 set(SOURCE_FILES 
     FreeImageHelper.cpp
     glad.c
     ArapDeformer.cpp
+    LibiglArap.cpp
 )
 
 link_directories(${FreeImage_LIBRARY_DIR} ${GLFW_LIBRARY_DIR} ${GLEW_LIBRARY_DIR})

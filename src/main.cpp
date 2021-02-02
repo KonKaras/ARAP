@@ -9,6 +9,7 @@
 #include <Eigen/Sparse>
 #include "GUI.h"
 #include "ArapDeformer.h"
+#include <LibiglArap.h>
 
 
 using namespace std;
@@ -32,59 +33,65 @@ int main() {
 	// Load the source and target mesh.
 	const std::string filenameMesh = std::string("../data/bunny/cactus600.off");
 	bool debug = false;
-	if (!debug) {
-		GUI* gui = new GUI(filenameMesh, 3);
-    }
-    else{
-		vector<int> fixedPoints;
-		fixedPoints.push_back(0);
-		//fixedPoints.push_back(1);
-		// fixedPoints.push_back(2);
-		// fixedPoints.push_back(3);
-		fixedPoints.push_back(4);
-		// fixedPoints.push_back(5);
-		fixedPoints.push_back(7);
-		//fixedPoints.push_back(10);
-		//fixedPoints.push_back(14);
-		// fixedPoints.push_back(9);
-		int handleID = 7;
-		Vector3d handleMoved(1, 2, 1);
-
-	
-		SimpleMesh sourceMesh;
-		if (!sourceMesh.loadMesh(filenameMesh)) {
-			std::cout << "Mesh file wasn't read successfully at location: " << filenameMesh << std::endl;
-			return -1;
+	bool libiglarapexample = true;
+	if (!libiglarapexample) {
+		if (!debug) {
+			GUI* gui = new GUI(filenameMesh, 3);
 		}
+		else {
+			vector<int> fixedPoints;
+			fixedPoints.push_back(0);
+			//fixedPoints.push_back(1);
+			// fixedPoints.push_back(2);
+			// fixedPoints.push_back(3);
+			fixedPoints.push_back(4);
+			// fixedPoints.push_back(5);
+			fixedPoints.push_back(7);
+			//fixedPoints.push_back(10);
+			//fixedPoints.push_back(14);
+			// fixedPoints.push_back(9);
+			int handleID = 7;
+			Vector3d handleMoved(1, 2, 1);
 
-		ArapDeformer deformer(&sourceMesh);
-	
-		auto t1 = std::chrono::high_resolution_clock::now();
-		//deformer.initDeformation(fixedPoints);
-		deformer.applyDeformation(fixedPoints, handleID, handleMoved, 3);
-		deformer.m_mesh.writeMesh("../data/bunny/deformedMesh1.off");
 
-		fixedPoints.clear();
-		fixedPoints.push_back(0);
-		//fixedPoints.push_back(1);
-		fixedPoints.push_back(2);
-		fixedPoints.push_back(3);
-		fixedPoints.push_back(4);
-		// fixedPoints.push_back(5);
-		fixedPoints.push_back(7);
-		//fixedPoints.push_back(10);
-		//fixedPoints.push_back(14);
-		// fixedPoints.push_back(9);
-		handleID = 7;
-		handleMoved = Vector3d(1, 2, 2);
-		//deformer.initDeformation(fixedPoints);
-		deformer.applyDeformation(fixedPoints, handleID, handleMoved, 3);
-		auto t2 = std::chrono::high_resolution_clock::now();
-		std::chrono::duration<double> eps = t2 - t1;
-		std::cout << "Deformation completed in "<< eps.count() <<" seconds." << std::endl;
+			SimpleMesh sourceMesh;
+			if (!sourceMesh.loadMesh(filenameMesh)) {
+				std::cout << "Mesh file wasn't read successfully at location: " << filenameMesh << std::endl;
+				return -1;
+			}
 
-		// sourceMesh.writeMesh("../data/bunny/deformedMesh.off"); 
+			ArapDeformer deformer(&sourceMesh);
 
+			auto t1 = std::chrono::high_resolution_clock::now();
+			//deformer.initDeformation(fixedPoints);
+			deformer.applyDeformation(fixedPoints, handleID, handleMoved, 3);
+			deformer.m_mesh.writeMesh("../data/bunny/deformedMesh1.off");
+
+			fixedPoints.clear();
+			fixedPoints.push_back(0);
+			//fixedPoints.push_back(1);
+			fixedPoints.push_back(2);
+			fixedPoints.push_back(3);
+			fixedPoints.push_back(4);
+			// fixedPoints.push_back(5);
+			fixedPoints.push_back(7);
+			//fixedPoints.push_back(10);
+			//fixedPoints.push_back(14);
+			// fixedPoints.push_back(9);
+			handleID = 7;
+			handleMoved = Vector3d(1, 2, 2);
+			//deformer.initDeformation(fixedPoints);
+			deformer.applyDeformation(fixedPoints, handleID, handleMoved, 3);
+			auto t2 = std::chrono::high_resolution_clock::now();
+			std::chrono::duration<double> eps = t2 - t1;
+			std::cout << "Deformation completed in " << eps.count() << " seconds." << std::endl;
+
+			// sourceMesh.writeMesh("../data/bunny/deformedMesh.off"); 
+
+		}
+	}
+	else {
+		LibiglArap libarap = LibiglArap(filenameMesh);
 	}
 	return 0;
 }
