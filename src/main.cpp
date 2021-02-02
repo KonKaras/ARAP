@@ -28,26 +28,36 @@ int main() {
 	 * 
 	 ***/
 
+	omp_set_num_threads(4);
 	// Load the source and target mesh.
-	const std::string filenameMesh = std::string("../data/bunny/test2.off");
-	
-	// GUI* gui = new GUI(filenameMesh, 3);
+	const std::string filenameMesh = std::string("../data/bunny/bunny.off");
 	
 	vector<int> fixedPoints;
-	fixedPoints.push_back(0);
-	//fixedPoints.push_back(1);
-	// fixedPoints.push_back(2);
-	// fixedPoints.push_back(3);
-	fixedPoints.push_back(4);
-	// fixedPoints.push_back(5);
-	fixedPoints.push_back(7);
-	fixedPoints.push_back(10);
-	fixedPoints.push_back(14);
-	// fixedPoints.push_back(9);
-	int handleID = 7;
-	Vector3f handleMoved(1, 2, 1);
+	// fixedPoints.push_back(0);
+	// fixedPoints.push_back(4);
+	// fixedPoints.push_back(7);
+	// fixedPoints.push_back(10);
+	// fixedPoints.push_back(14);
+	// int handleID = 7;
+	// Vector3f handleMoved(1, 2, 1);
 
-	
+	fixedPoints.push_back(1202);
+	fixedPoints.push_back(1412);
+	fixedPoints.push_back(706);
+	fixedPoints.push_back(11647);
+	fixedPoints.push_back(1368);
+	fixedPoints.push_back(1647);
+	fixedPoints.push_back(1520);
+	fixedPoints.push_back(1015);
+	fixedPoints.push_back(79);
+	fixedPoints.push_back(1578);
+	fixedPoints.push_back(1617);
+	fixedPoints.push_back(2021);
+	fixedPoints.push_back(1603);
+	fixedPoints.push_back(224);
+	int handleID = 224;
+	Vector3f handleMoved(0.005, 0.083846, 0.057446);
+
 	SimpleMesh sourceMesh;
 	if (!sourceMesh.loadMesh(filenameMesh)) {
 		std::cout << "Mesh file wasn't read successfully at location: " << filenameMesh << std::endl;
@@ -59,23 +69,23 @@ int main() {
 	auto t1 = std::chrono::high_resolution_clock::now();
 	deformer.applyDeformation(fixedPoints, handleID, handleMoved, 3); 
 
-	fixedPoints.clear();
-	fixedPoints.push_back(0);
-	//fixedPoints.push_back(1);
-	// fixedPoints.push_back(2);
-	// fixedPoints.push_back(3);
-	fixedPoints.push_back(4);
-	// fixedPoints.push_back(5);
-	fixedPoints.push_back(7);
-	fixedPoints.push_back(10);
-	fixedPoints.push_back(14);
-	// fixedPoints.push_back(9);
-	handleID = 0;
-	handleMoved.x() = 0;
-	handleMoved.y() = 0;
-	handleMoved.z() = 2;
+	// fixedPoints.clear();
+	// fixedPoints.push_back(0);
+	// //fixedPoints.push_back(1);
+	// // fixedPoints.push_back(2);
+	// // fixedPoints.push_back(3);
+	// fixedPoints.push_back(4);
+	// // fixedPoints.push_back(5);
+	// fixedPoints.push_back(7);
+	// fixedPoints.push_back(10);
+	// fixedPoints.push_back(14);
+	// // fixedPoints.push_back(9);
+	// handleID = 0;
+	// handleMoved.x() = 0;
+	// handleMoved.y() = 0;
+	// handleMoved.z() = 2;
 
-	deformer.applyDeformation(fixedPoints, handleID, handleMoved, 3);
+	// deformer.applyDeformation(fixedPoints, handleID, handleMoved, 3);
 
 
 	auto t2 = std::chrono::high_resolution_clock::now();

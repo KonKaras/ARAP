@@ -245,7 +245,7 @@ public:
 	float computeUniformWeightForVertex(int i){
 		vector<int> neighbors_i = getNeighborsOf(i);
 		float wij = 1 / (float) neighbors_i.size();
-		cout<<"Uniform weight for vertex "<<i<<" with "<<neighbors_i.size() <<" is : "<<wij<<endl;
+		// cout<<"Uniform weight for vertex "<<i<<" with "<<neighbors_i.size() <<" is : "<<wij<<endl;
 		return wij;
 	}
 
@@ -269,7 +269,7 @@ public:
 			Vertex vertex_o = m_vertices[other_vertex_id];
 			float theta = cotan(vertex_i.position - vertex_o.position, vertex_j.position - vertex_o.position); 
 			// float theta = angleBetweenVectors(vertex_i.position - vertex_o.position, vertex_j.position - vertex_o.position); 
-			cout<<"Theta for i "<<i<<" and j "<<j<<" and other v "<<other_vertex_id<<" = "<<theta<<endl;
+			// cout<<"Theta for i "<<i<<" and j "<<j<<" and other v "<<other_vertex_id<<" = "<<theta<<endl;
 			// cot_theta_sum += (1 / tan(theta));
 			cot_theta_sum += theta;
 		}
