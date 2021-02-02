@@ -21,7 +21,9 @@
 class GUI {
 public:
 
-	GUI(std::string filenameMesh, int iter) {
+	GUI(std::string filenameMesh, int iter, int get_weight_type, int get_estimation_type) {
+		weight_type = get_weight_type;
+		estimation_type = get_estimation_type;
 		num_iterations = iter;
 		displayMesh(filenameMesh);
 	}
@@ -29,6 +31,8 @@ public:
 	std::set<int> staticFaces, staticFacesPreviousInit;
 	std::set<int> handles, handlesPreviousInit;
 	int num_iterations;
+	int weight_type;
+	int estimation_type;
 
 private:
 
@@ -230,7 +234,7 @@ private:
 				return;
 			}
 			if (!deformerInitiated) {
-				deformer = ArapDeformer(&sourceMesh);
+				deformer = ArapDeformer(&sourceMesh, weight_type, estimation_type);
 				deformerInitiated = true;
 			}
 			staticFacesPreviousInit = staticFaces;

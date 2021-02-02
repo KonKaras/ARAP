@@ -1,21 +1,10 @@
 #include "ArapDeformer.h"
 
-#define USE_UNIFORM_WEIGHTS false
-#define USE_COTANGENT_WEIGHTS true
-#define USE_CONSTANT_WEIGHTS false
-
-#define USE_SIMPLICIAL_LDLT false
-#define USE_SIMPLICIAL_LLT false
-#define USE_SPARSE_QR false
-#define USE_SPARSE_LU true
-
-#define USE_SPARSE_MATRICES (USE_SIMPLICIAL_LLT || USE_SIMPLICIAL_LDLT || USE_SPARSE_QR || USE_SPARSE_LU)
-
 typedef Eigen::Triplet<double> T;
 
 ArapDeformer::ArapDeformer(){}
 
-ArapDeformer::ArapDeformer(SimpleMesh *mesh) {
+ArapDeformer::ArapDeformer(SimpleMesh *mesh, int weight_type, int estimation_type) {
     m_mesh = *mesh;
     m_num_p = m_mesh.getNumberOfFaces();
     m_num_v = m_mesh.getNumberOfVertices();
@@ -26,8 +15,70 @@ ArapDeformer::ArapDeformer(SimpleMesh *mesh) {
         m_cell_rotations[i] = MatrixXd::Zero(3, 3);
     }
 
+    setWeightType(weight_type);
+    setDecompositionType(estimation_type);
+
     buildWeightMatrix();
     calculateSystemMatrix();
+}
+
+void ArapDeformer::setWeightType(int weight_type) {
+    if (weight_type == 0) {
+        use_uniform_weights = true;
+        use_constant_weights = false;
+        use_cotangent_weights = false;
+    }
+    else if (weight_type == 1) {
+        use_uniform_weights = false;
+        use_constant_weights = true;
+        use_cotangent_weights = false;
+    }
+    //if weight_type = 2 or any other number than 1 and 0
+    else {
+        use_uniform_weights = false;
+        use_constant_weights = false;
+        use_cotangent_weights = true;
+    }
+}
+
+void ArapDeformer::setDecompositionType(int estimation_type) {
+    if (estimation_type == 0) {
+        use_simplicial_ldlt = true;
+        use_simplicial_llt = false;
+        use_sparse_qr = false;
+        use_sparse_lu = false;
+    }
+    else if (estimation_type == 1) {
+        use_simplicial_ldlt = false;
+        use_simplicial_llt = true;
+        use_sparse_qr = false;
+        use_sparse_lu = false;
+    }
+    else if (estimation_type == 2) {
+        use_simplicial_ldlt = false;
+        use_simplicial_llt = false;
+        use_sparse_qr = true;
+        use_sparse_lu = false;
+    }
+    else if(estimation_type == 3) {
+        use_simplicial_ldlt = false;
+        use_simplicial_llt = false;
+        use_sparse_qr = false;
+        use_sparse_lu = true;
+    }
+    else {
+        use_simplicial_ldlt = false;
+        use_simplicial_llt = false;
+        use_sparse_qr = false;
+        use_sparse_lu = false;
+    }
+
+    if (use_simplicial_ldlt || use_simplicial_llt || use_sparse_qr || use_sparse_lu) {
+        use_sparse_matrices = true;
+    }
+    else {
+        use_sparse_matrices = false;
+    }
 }
 
 void ArapDeformer::setHandleConstraint(int handleID, Vector3d newHandlePosition){
@@ -116,14 +167,14 @@ void ArapDeformer::updateB(){
 void ArapDeformer::estimateVertices(){
     std::cout<<"Solving LES ..." <<endl;
     MatrixXd result;
-    if(!USE_SPARSE_MATRICES){
+    if(!use_sparse_matrices){
          MatrixXd system_matrix = m_system_matrix;
          static JacobiSVD<Eigen::MatrixXd> svd(system_matrix, Eigen::ComputeThinU | Eigen::ComputeThinV);
          result = svd.solve(m_b);
          m_mesh.setPPrime(result);
     }
     else{
-        if(USE_SIMPLICIAL_LDLT){
+        if(use_simplicial_ldlt){
             SimplicialLDLT<SparseMatrix<double>> solver;
             solver.compute(m_system_matrix_sparse);
             if(solver.info()!=Success) {
@@ -139,7 +190,7 @@ void ArapDeformer::estimateVertices(){
             //std::cout<<result<<endl;
             m_mesh.setPPrime(result); 
         }
-        else if(USE_SIMPLICIAL_LLT){
+        else if(use_simplicial_llt){
             SimplicialLLT<SparseMatrix<double>, Lower, NaturalOrdering<int>> solver;
             solver.compute(m_system_matrix_sparse);
             if(solver.info()!=Success) {
@@ -153,7 +204,7 @@ void ArapDeformer::estimateVertices(){
             }
             m_mesh.setPPrime(result);
         }
-        else if(USE_SPARSE_LU){
+        else if(use_sparse_lu){
             SparseLU<SparseMatrix<double>> solver;
             solver.compute(m_system_matrix_sparse);
             if(solver.info()!=Success) {
@@ -167,7 +218,7 @@ void ArapDeformer::estimateVertices(){
             }
             m_mesh.setPPrime(result);
         }
-        else if (USE_SPARSE_QR){
+        else if (use_sparse_qr){
             SparseQR<SparseMatrix<double>, COLAMDOrdering<int>> solver;
             m_system_matrix_sparse.makeCompressed();
             solver.compute(m_system_matrix_sparse);
@@ -210,14 +261,14 @@ double ArapDeformer::calculateEnergy(){
 
 void ArapDeformer::buildWeightMatrix(){
     std::cout << "Generating Weight Matrix" << endl;
-    if(USE_CONSTANT_WEIGHTS){
+    if(use_constant_weights){
         std::cout << "Using constant weights" << endl;
         m_weight_matrix = MatrixXd::Ones(m_num_v, m_num_v);
     }
     else{
         m_weight_matrix = MatrixXd::Zero(m_num_v, m_num_v);
         for (int i = 0; i < m_num_v; i++) {
-            if(USE_UNIFORM_WEIGHTS){
+            if(use_uniform_weights){
                 std::cout << "Using uniform weights" << endl;
                 double weight_ij = m_mesh.computeUniformWeightForVertex(i);
                 vector<int> neighbors = m_mesh.getNeighborsOf(i);
@@ -225,7 +276,7 @@ void ArapDeformer::buildWeightMatrix(){
                     m_weight_matrix(i, j) = weight_ij;
                 }
             }
-            if (USE_COTANGENT_WEIGHTS){
+            if (use_cotangent_weights){
                 std::cout << "Using cotangent weights" << endl;
                 vector<int> neighbors = m_mesh.getNeighborsOf(i);
                 for (int j : neighbors){
@@ -279,7 +330,7 @@ void ArapDeformer::updateSystemMatrix(){
         m_system_matrix(i, i) = 1;
     }
 
-    if (USE_SPARSE_MATRICES)
+    if (use_sparse_matrices)
         m_system_matrix_sparse = m_system_matrix.sparseView();
 }
 
@@ -314,7 +365,7 @@ void ArapDeformer::applyDeformation(vector<int> fixed_points, int handleID, Vect
 
     std::cout << "handleID " << m_handle_id << endl;
     std::cout << "# fixed Vertices " << m_constraints.size() << endl;
-    std::cout <<"Using sparse matrices: "<<USE_SPARSE_MATRICES<<endl;
+    std::cout <<"Using sparse matrices: "<<use_sparse_matrices<<endl;
     //std::cout << "NonZeros in sparse matrix: "<<m_system_matrix_sparse.nonZeros()<<endl;
 
     setHandleConstraint(handleID, handleNewPosition);

@@ -19,7 +19,7 @@ class ArapDeformer {
 
 public:
     ArapDeformer();
-	ArapDeformer(SimpleMesh *mesh);
+	ArapDeformer(SimpleMesh *mesh, int weight_type, int estimation_type);
     void initDeformation(vector<int> fixed_points);
     void setHandleConstraint(int handleID, Vector3d newHandlePosition);
     void applyDeformation(vector<int> fixed_points, int handleID, Vector3d handleNewPosition, int iterations);
@@ -36,8 +36,9 @@ private:
     Vector3d getConstraintI(int id);
     bool isInConstraints(int i);
     void updateSystemMatrix();
+    void setWeightType(int weight_type);
+    void setDecompositionType(int estimation_type);
 
-    //SimpleMesh m_mesh;
     vector<MatrixXd> m_cell_rotations;
     MatrixXd m_system_matrix;
     MatrixXd m_system_matrix_original;
@@ -49,6 +50,14 @@ private:
     int m_handle_id;
     Vector3d m_new_handle_position;
     vector<Constraint> m_constraints;
+    bool use_uniform_weights;
+    bool use_constant_weights;
+    bool use_cotangent_weights;
+    bool use_simplicial_ldlt;
+    bool use_simplicial_llt;
+    bool use_sparse_qr;
+    bool use_sparse_lu;
+    bool use_sparse_matrices;
 
 };
 

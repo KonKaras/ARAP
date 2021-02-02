@@ -30,10 +30,30 @@ int main() {
 	 ***/
 
 	// Load the source and target mesh.
-	const std::string filenameMesh = std::string("../data/bunny/cactus600.off");
+	std::string filenameMesh = std::string("../data/bunny/");
+	std::string filename;
+	std::cout << "Insert filename: " << std::endl;
+	std::cin >> filename;
+	filenameMesh.append(filename);
+	filenameMesh.append(".off");
+
+	std::ifstream file(filenameMesh);
+	if (!file.is_open()) {
+		std::cout << "Mesh file wasn't read successfully." << std::endl;
+		return false;
+	}
+
+	int weight_type;
+	std::cout << "Choose type of weighting function (0 = uniform, 1 = constant, 2 = cotangent)" << std::endl;
+	std::cin >> weight_type;
+
+	int estimation_type;
+	std::cout << "Choose type of matrix decomposition (0 = simplicial LDLT, 1 = simplicial LLT, 2 = sparse QR, 3 = sparse LU)" << std::endl;
+	std::cin >> estimation_type;
+
 	bool debug = false;
 	if (!debug) {
-		GUI* gui = new GUI(filenameMesh, 3);
+		GUI* gui = new GUI(filenameMesh, 3, weight_type, estimation_type);
     }
     else{
 		vector<int> fixedPoints;
@@ -57,7 +77,7 @@ int main() {
 			return -1;
 		}
 
-		ArapDeformer deformer(&sourceMesh);
+		ArapDeformer deformer(&sourceMesh, weight_type, estimation_type);
 	
 		auto t1 = std::chrono::high_resolution_clock::now();
 		//deformer.initDeformation(fixedPoints);
