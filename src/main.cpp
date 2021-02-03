@@ -30,26 +30,61 @@ int main() {
 	 ***/
 
 	// Load the source and target mesh.
-	std::string filenameMesh = std::string("../data/bunny/");
-	std::string filename;
-	std::cout << "Insert filename: " << std::endl;
-	std::cin >> filename;
-	filenameMesh.append(filename);
-	filenameMesh.append(".off");
+	bool isInvalid = true;
+	std::string filenameMesh, filename;
+	do {
+		isInvalid = true;
+		filenameMesh = std::string("../data/bunny/");
+		std::cout << "Insert filename: " << std::endl;
+		std::cin >> filename;
+		filenameMesh.append(filename);
+		filenameMesh.append(".off");
 
-	std::ifstream file(filenameMesh);
-	if (!file.is_open()) {
-		std::cout << "Mesh file wasn't read successfully." << std::endl;
-		return false;
-	}
+		std::ifstream file(filenameMesh);
+		if (file.is_open()) {
+			isInvalid = false;
+		}
+		if (isInvalid) {
+			std::cout << "Mesh file does not exist." << std::endl;
+			std::cin.clear();
+			std::cin.ignore();
+		}
+	} while (isInvalid);
 
-	int weight_type;
-	std::cout << "Choose type of weighting function (0 = uniform, 1 = constant, 2 = cotangent)" << std::endl;
-	std::cin >> weight_type;
+	int weight_type, estimation_type;
+	do {
+		isInvalid = true;
+		std::cout << "Choose type of weighting function (0 = uniform, 1 = constant, 2 = cotangent)" << std::endl;
+		std::cin >> weight_type;
 
-	int estimation_type;
-	std::cout << "Choose type of matrix decomposition (0 = sparse QR, 1 = sparse LU)" << std::endl;
-	std::cin >> estimation_type;
+		if (!std::cin.fail()) {
+			if (weight_type >= 0 && weight_type <= 2) {
+				isInvalid = false;
+			}
+		}
+		if (isInvalid) {
+			std::cout << "Invalid input!" << std::endl;
+			std::cin.clear();
+			std::cin.ignore();
+		}
+	} while (isInvalid);
+
+	do {
+		isInvalid = true;
+		std::cout << "Choose type of matrix decomposition (0 = sparse QR, 1 = sparse LU, 2 = non sparce matrices)" << std::endl;
+		std::cin >> estimation_type;
+
+		if (!std::cin.fail()) {
+			if (estimation_type >= 0 && estimation_type <= 2) {
+				isInvalid = false;
+			}
+		}
+		if (isInvalid) {
+			std::cout << "Invalid input!" << std::endl;
+			std::cin.clear();
+			std::cin.ignore();
+		}
+	} while (isInvalid);
 
 	bool debug = false;
 	if (!debug) {

@@ -67,7 +67,7 @@ void ArapDeformer::setDecompositionType(int estimation_type) {
         use_sparse_qr = false;
         use_sparse_lu = true;
     }
-    else {
+    else if(estimation_type == 2){
         use_simplicial_ldlt = false;
         use_simplicial_llt = false;
         use_sparse_qr = false;
