@@ -30,6 +30,7 @@ public:
 
 	std::set<int> staticFaces, staticFacesPreviousInit;
 	std::set<int> handles, handlesPreviousInit;
+	std::set<int> staticVertices, staticVerticesPreviousInit;
 	int num_iterations;
 	int weight_type;
 	int estimation_type;
@@ -38,6 +39,7 @@ private:
 
 	bool arapMode = false;
 	bool handleSelectionMode = false;
+	bool faceSelection = false;
 	bool mouseDown = false;
 	bool handleDown = false;
 	bool vertexHit = false;
@@ -70,8 +72,10 @@ private:
 		bool handleSelectionModeRef = handleSelectionMode;
 
 		std::cout << "(Usage: [click]  Pick face on object)" << std::endl;
-		std::cout << "(Usage: [press 1]  Toggle between ARAP and Selection)" << std::endl;
-		std::cout << "(Usage: [press 2]  Select Handles)" << std::endl;
+		std::cout << "(Usage: [press 1]  Select Static Vertices)" << std::endl;
+		std::cout << "(Usage: [press 2]  Select Static Faces)" << std::endl;
+		std::cout << "(Usage: [press 3]  Select Handles)" << std::endl;
+		std::cout << "(Usage: [press 4]  Start ARAP Mode)" << std::endl;
 		std::cout << "ARAP active" << std::endl;
 
 		igl::opengl::glfw::Viewer viewer;
@@ -105,6 +109,10 @@ private:
 						handleDown = true;
 						currentMovingHandle = handleId;
 						viewer.data().clear_points();
+						set<int>::iterator itr;
+						for (itr = staticVertices.begin(); itr != staticVertices.end(); itr++) {
+							viewer.data().add_points(vertices.row(*itr), Eigen::RowVector3d(0, 0, 1));
+						}
 						RequestArapInit();
 						return true;// DisplacementHandler(viewer);
 					}
@@ -151,37 +159,66 @@ private:
 
 		viewer.callback_key_down = [this](igl::opengl::glfw::Viewer& viewer, unsigned char key, int modifier) -> bool
 		{
-			//Toggle ARAP
+			//Fixed Vertex selection
 			if (key == '1') {
+				faceSelection = false;
 				handleSelectionMode = false;
-				arapMode = !arapMode;
-				if (arapMode) {
-					for each (int fid in staticFaces)
-					{
-						UpdateColor(fid, Eigen::Vector3d(0, 0, 1), viewer);
-					}
-					//RequestArapInit();
-				}
-				else {
-					for each (int fid in staticFaces)
-					{
-						UpdateColor(fid, Eigen::Vector3d(1, 0, 0), viewer);
-					}
-				}
-
-				std::string out = arapMode ? "ARAP active" : "Static Face Selection active";
-				std::cout << out << std::endl;
-				return true;
-			}
-			//Toggle handle selection
-			if (key == '2') {
 				arapMode = false;
 				for each (int fid in staticFaces)
 				{
 					UpdateColor(fid, Eigen::Vector3d(1, 0, 0), viewer);
 				}
+				RepaintVertices(viewer);
+				std::string out = "Static Vertices Selection active, ARAP Paused";
+				std::cout << out << std::endl;
+				return true;
+			}
+			if (key == '2') {
+				faceSelection = true;
+				handleSelectionMode = false;
+				arapMode = false;
+				for each (int fid in staticFaces)
+				{
+					UpdateColor(fid, Eigen::Vector3d(1, 0, 0), viewer);
+				}
+				RepaintVertices(viewer);
+				std::string out = "Static Faces Selection active, ARAP Paused";
+				std::cout << out << std::endl;
+				return true;
+			}
+			//Toggle handle selection
+			if (key == '3') {
+				faceSelection = false;
+				arapMode = false;
+				for each (int fid in staticFaces)
+				{
+					UpdateColor(fid, Eigen::Vector3d(1, 0, 0), viewer);
+				}
+				RepaintVertices(viewer);
 				handleSelectionMode = true;		
 				std::cout << "Handle Selection Active, ARAP Paused" << std::endl;
+			}
+			//ARAP Mode
+			if (key == '4') {
+				faceSelection = false;
+				handleSelectionMode = false;
+				arapMode = true;
+				for each (int fid in staticFaces)
+				{
+					UpdateColor(fid, Eigen::Vector3d(0, 0, 1), viewer);
+				}
+				//Repaint Vertices in blue
+				viewer.data().clear_points();
+				set<int>::iterator itr;
+				for (itr = handles.begin(); itr != handles.end(); itr++) {
+					viewer.data().add_points(vertices.row(*itr), Eigen::RowVector3d(0, 1, 0));
+				}
+				for (itr = staticVertices.begin(); itr != staticVertices.end(); itr++) {
+					viewer.data().add_points(vertices.row(*itr), Eigen::RowVector3d(0, 0, 1));
+				}
+				std::string out = "ARAP active";
+				std::cout << out << std::endl;
+				return true;
 			}
 			return true;
 		};
@@ -217,7 +254,7 @@ private:
 
 	void RequestArapInit() {
 		//check if fixed or handle vertices have been added or removed -> re-init structs
-		if (handles.size() != 0 && (staticFaces != staticFacesPreviousInit || handles != handlesPreviousInit) || prevMovingHandle != currentMovingHandle) {
+		if (handles.size() != 0 && (staticFaces != staticFacesPreviousInit || staticVertices != staticVerticesPreviousInit || handles != handlesPreviousInit) || prevMovingHandle != currentMovingHandle) {
 			arapInitialized = false;
 			//prepare UI structs
 			std::vector<int> staticsAsVector = GetStaticVerticesFromFaces();//(staticFaces.size());
@@ -239,26 +276,28 @@ private:
 			}
 			staticFacesPreviousInit = staticFaces;
 			handlesPreviousInit = handles;
+			staticVerticesPreviousInit = staticVertices;
 			arapInitialized = true;
 		}
 	}
 
 	std::vector<int> GetStaticVerticesFromFaces() {
-		std::set<int> staticVertices;
-		staticVertices.clear();
+		std::set<int> staticVerticesLocal;
+		staticVerticesLocal.clear();
+		staticVerticesLocal = staticVertices;
 		//bool prevHandleIsNowStatic = false;
 		for (int face : staticFaces) {
 			for (int i = 0; i < 3; i++) {
-				staticVertices.insert(faces.row(face)(i));
+				staticVerticesLocal.insert(faces.row(face)(i));
 			}
 		}
 		//if the static faces do not contain the prev handle -> make prev handle non-static!
 		//if (!prevHandleIsNowStatic && staticVertices.find(prevMovingHandle) != staticVertices.end()) staticVertices.erase(prevMovingHandle);
 
-		if (staticVertices.find(currentMovingHandle) != staticVertices.end()) staticVertices.erase(currentMovingHandle);
+		if (staticVerticesLocal.find(currentMovingHandle) != staticVerticesLocal.end()) staticVerticesLocal.erase(currentMovingHandle);
 
-		std::vector<int> staticVerticesAsVector(staticVertices.size());
-		std::copy(staticVertices.begin(), staticVertices.end(), staticVerticesAsVector.begin());
+		std::vector<int> staticVerticesAsVector(staticVerticesLocal.size());
+		std::copy(staticVerticesLocal.begin(), staticVerticesLocal.end(), staticVerticesAsVector.begin());
 		staticVerticesAsVector.push_back(currentMovingHandle);
 		return staticVerticesAsVector;
 	}
@@ -293,13 +332,42 @@ private:
 			viewer.core().proj, viewer.core().viewport, vertices, faces, fid, bc))
 		{
 			vertexHit = true;
-			auto& toSelect = handleSelectionMode ? handles : staticFaces;
-			if(handleSelectionMode) fid = GetClosestVertexIdFromBC(fid, bc);
+			/*auto& toSelect = handles;
+			if (!handleSelectionMode) {
+				if (faceSelection) {
+					toSelect = staticFaces;
+				}
+				else {
+					toSelect = staticVertices;
+				}
+			}*/
+			//auto& toSelect = handleSelectionMode ? handles : staticFaces;
+			if(!faceSelection) fid = GetClosestVertexIdFromBC(fid, bc);
 			if (mouseID == 0) {
-				Select(fid, bc, toSelect, viewer);
+				if (handleSelectionMode) {
+					Select(fid, bc, handles, viewer);
+				}
+				else {
+					if (faceSelection) {
+						Select(fid, bc, staticFaces, viewer);
+					}
+					else {
+						Select(fid, bc, staticVertices, viewer);
+					}
+				}
 			}
 			else if(mouseID == 2){
-				Unselect(fid, bc, toSelect, viewer);
+				if (handleSelectionMode) {
+					Unselect(fid, bc, handles, viewer);
+				}
+				else {
+					if (faceSelection) {
+						Unselect(fid, bc, staticFaces, viewer);
+					}
+					else {
+						Unselect(fid, bc, staticVertices, viewer);
+					}
+				}
 			}
 			else {
 				return false;
@@ -310,14 +378,18 @@ private:
 	}
 
 	void Unselect(int fid, Eigen::Vector3f& bc, std::set<int>& toSelect, igl::opengl::glfw::Viewer& viewer) {
+
 		if (toSelect.find(fid) != toSelect.end()) {
 			toSelect.erase(fid);
 			//repaint
-			if (handleSelectionMode) {
+			if (!faceSelection) {
 				viewer.data().clear_points();
 				set<int>::iterator itr;
 				for (itr = handles.begin(); itr != handles.end(); itr++) {
 					viewer.data().add_points(vertices.row(*itr), Eigen::RowVector3d(0, 1, 0));
+				}
+				for (itr = staticVertices.begin(); itr != staticVertices.end(); itr++) {
+					viewer.data().add_points(vertices.row(*itr), Eigen::RowVector3d(1, 0, 0));
 				}
 			}
 			else {
@@ -330,12 +402,14 @@ private:
 	{
 		auto newColor = handleSelectionMode ? Vector3d(0, 1, 0) : Vector3d(1, 0, 0);
 
-		if (handleSelectionMode) {
-			int selectedVertex = fid;//GetClosestVertexIdFromBC(fid, bc);
-			toSelect.insert(selectedVertex);
-			viewer.data().add_points(vertices.row(selectedVertex), Eigen::RowVector3d(0,1,0));
-			//checks that vertex is hit
-			vertexHit = true;
+		if (!faceSelection) {
+			if (handles.find(fid) == handles.end() && staticVertices.find(fid) == staticVertices.end()) {
+				int selectedVertex = fid;//GetClosestVertexIdFromBC(fid, bc);
+				toSelect.insert(selectedVertex);
+				viewer.data().add_points(vertices.row(selectedVertex), newColor.transpose()); //Unsure about color vector
+				//checks that vertex is hit
+				vertexHit = true;
+			}
 		}
 		else {
 			//static faces are defined
@@ -345,6 +419,17 @@ private:
 				UpdateColor(fid, newColor, viewer);
 				//std::cout << fid << std::endl;
 			}
+		}
+	}
+
+	void RepaintVertices(igl::opengl::glfw::Viewer& viewer) {
+		viewer.data().clear_points();
+		set<int>::iterator itr;
+		for (itr = handles.begin(); itr != handles.end(); itr++) {
+			viewer.data().add_points(vertices.row(*itr), Eigen::RowVector3d(0, 1, 0));
+		}
+		for (itr = staticVertices.begin(); itr != staticVertices.end(); itr++) {
+			viewer.data().add_points(vertices.row(*itr), Eigen::RowVector3d(1, 0, 0));
 		}
 	}
 
