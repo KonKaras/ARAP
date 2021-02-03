@@ -93,6 +93,8 @@ void ArapDeformer::setHandleConstraint(int handleID, Vector3d newHandlePosition)
 
 
 void ArapDeformer::estimateRotation(){
+
+    #pragma omp parallel for
     for(int vertexID=0; vertexID< m_num_v; vertexID++){
         Matrix3d rotation = Matrix3d::Identity();
         vector<int> neighbors = m_mesh.getNeighborsOf(vertexID);
@@ -143,6 +145,7 @@ bool ArapDeformer::isInConstraints(int i) {
 
 void ArapDeformer::updateB(){
     m_b = MatrixXd::Zero(m_num_v, 3);
+    #pragma omp parallel for
     for ( int i = 0; i< m_num_v; i++)
     {
         Vector3d sum(0.0f, 0.0f, 0.0f);
@@ -269,6 +272,7 @@ void ArapDeformer::buildWeightMatrix(){
     }
     else{
         m_weight_matrix = MatrixXd::Zero(m_num_v, m_num_v);
+        #pragma omp parallel for
         for (int i = 0; i < m_num_v; i++) {
             if(use_uniform_weights){
                 std::cout << "Using uniform weights" << endl;
@@ -301,6 +305,7 @@ void ArapDeformer::buildWeightMatrix(){
 void ArapDeformer::calculateSystemMatrix(){
     m_system_matrix = MatrixXd::Zero(m_num_v, m_num_v);
     for (int i = 0; i < m_num_v; i++) {
+        // cout<<"OpenMP Thread "<<omp_get_thread_num()<<endl;
         vector<int> neighbors = m_mesh.getNeighborsOf(i);
         int numNeighbors = neighbors.size();
         for (int j = 0; j < numNeighbors; ++j){
@@ -309,28 +314,26 @@ void ArapDeformer::calculateSystemMatrix(){
             m_system_matrix(i, neighborVertex) = -m_weight_matrix(i, neighborVertex);
         }
     }
-   
-    // for (Constraint c : m_constraints) {
-    //     int i = c.vertexID;
-    //     m_system_matrix.row(i).setZero();
-    //     m_system_matrix(i, i) = 1;
-    // }
 
     m_system_matrix_original = m_system_matrix;
-
-    // if (USE_SPARSE_MATRICES)
-    //     m_system_matrix_sparse = m_system_matrix.sparseView();
-
 }
 
 void ArapDeformer::updateSystemMatrix(){
 
     m_system_matrix = m_system_matrix_original;
+    #pragma omp parallel for
+    for (int c = 0; c < m_constraints.size(); c++) {
+        int i = m_constraints[c].vertexID;
+        m_system_matrix.row(i).setZero();
+        m_system_matrix(i, i) = 1;
+    }
+    /*
     for (Constraint c : m_constraints) {
         int i = c.vertexID;
         m_system_matrix.row(i).setZero();
         m_system_matrix(i, i) = 1;
     }
+    */
 
     if (use_sparse_matrices)
         m_system_matrix_sparse = m_system_matrix.sparseView();
@@ -351,19 +354,27 @@ void ArapDeformer::initDeformation(vector<int> fixed_points){
 
 void ArapDeformer::applyDeformation(vector<int> fixed_points, int handleID, Vector3d handleNewPosition, int iterations) {
     m_constraints.clear();
-
+    #pragma omp declare reduction (merge : vector<Constraint> : omp_out.insert(omp_out.end(), omp_in.begin(), omp_in.end()))
+    #pragma omp parallel for reduction(merge: m_constraints)
+    for (int i = 0; i < fixed_points.size(); i++) {
+        Constraint c;
+        c.vertexID = i;
+        c.position = m_mesh.getVertex(i);
+        m_constraints.push_back(c);
+    }
+    /*
     for (int i : fixed_points) {
         Constraint c;
         c.vertexID = i;
         c.position = m_mesh.getVertex(i);
         m_constraints.push_back(c);
     }
+    */
 
     updateSystemMatrix();
 
     m_handle_id = handleID;
     m_new_handle_position = handleNewPosition;
-    // calculateSystemMatrix();
 
     std::cout << "handleID " << m_handle_id << endl;
     std::cout << "# fixed Vertices " << m_constraints.size() << endl;

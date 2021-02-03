@@ -227,7 +227,7 @@ private:
 		viewer.data().set_mesh(vertices, faces);
 
 		//viewer.data().add_points(vertices, Eigen::RowVector3d(1, 0, 0));
-
+		viewer.data().point_size = 10;
 		viewer.data().set_colors(colors);
 		viewer.data().show_lines = true;
 		

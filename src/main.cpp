@@ -29,6 +29,7 @@ int main() {
 	 * 
 	 ***/
 
+	omp_set_num_threads(4);
 	// Load the source and target mesh.
 	bool isInvalid = true;
 	std::string filenameMesh, filename;
