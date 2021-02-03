@@ -7,7 +7,7 @@
 #define USE_SIMPLICIAL_LDLT false
 #define USE_SIMPLICIAL_LLT false
 #define USE_SPARSE_QR false
-#define USE_SPARSE_LU true
+#define USE_SPARSE_LU false
 
 #define USE_SPARSE_MATRICES (USE_SIMPLICIAL_LLT || USE_SIMPLICIAL_LDLT || USE_SPARSE_QR || USE_SPARSE_LU)
 
@@ -210,14 +210,14 @@ float ArapDeformer::calculateEnergy(){
 void ArapDeformer::buildWeightMatrix(){
     std::cout << "Generating Weight Matrix" << endl;
     if(USE_CONSTANT_WEIGHTS){
-        std::cout << "Using constant weights" << endl;
+        // std::cout << "Using constant weights" << endl;
         m_weight_matrix = MatrixXf::Ones(m_num_v, m_num_v);
     }
     else{
         m_weight_matrix = MatrixXf::Zero(m_num_v, m_num_v);
         for (int i = 0; i < m_num_v; i++) {
             if(USE_UNIFORM_WEIGHTS){
-                std::cout << "Using uniform weights" << endl;
+                // std::cout << "Using uniform weights" << endl;
                 float weight_ij = m_mesh.computeUniformWeightForVertex(i);
                 vector<int> neighbors = m_mesh.getNeighborsOf(i);
                 for (int j : neighbors){
@@ -225,7 +225,7 @@ void ArapDeformer::buildWeightMatrix(){
                 }
             }
             if (USE_COTANGENT_WEIGHTS){
-                std::cout << "Using cotangent weights" << endl;
+                // std::cout << "Using cotangent weights" << endl;
                 vector<int> neighbors = m_mesh.getNeighborsOf(i);
                 for (int j : neighbors){
                     float weight_ij = 0;
@@ -240,7 +240,7 @@ void ArapDeformer::buildWeightMatrix(){
         }
     }
     
-    std::cout<<"Weight matrix: "<<m_weight_matrix<<endl;
+    // std::cout<<"Weight matrix: "<<m_weight_matrix<<endl;
 } 
 
 
@@ -255,17 +255,8 @@ void ArapDeformer::calculateSystemMatrix(){
             m_system_matrix(i, neighborVertex) = -m_weight_matrix(i, neighborVertex);
         }
     }
-   
-    // for (Constraint c : m_constraints) {
-    //     int i = c.vertexID;
-    //     m_system_matrix.row(i).setZero();
-    //     m_system_matrix(i, i) = 1;
-    // }
 
     m_system_matrix_original = m_system_matrix;
-
-    // if (USE_SPARSE_MATRICES)
-    //     m_system_matrix_sparse = m_system_matrix.sparseView();
 
 }
 
