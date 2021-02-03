@@ -7,13 +7,14 @@
 #define USE_SIMPLICIAL_LDLT false
 #define USE_SIMPLICIAL_LLT false
 #define USE_SPARSE_QR false
-#define USE_SPARSE_LU true
+#define USE_SPARSE_LU false
 
 #define USE_SPARSE_MATRICES (USE_SIMPLICIAL_LLT || USE_SIMPLICIAL_LDLT || USE_SPARSE_QR || USE_SPARSE_LU)
 
 typedef Eigen::Triplet<double> T;
 
 ArapDeformer::ArapDeformer(){}
+
 
 ArapDeformer::ArapDeformer(SimpleMesh *mesh) {
     m_mesh = *mesh;
@@ -41,6 +42,8 @@ void ArapDeformer::setHandleConstraint(int handleID, Vector3d newHandlePosition)
 
 
 void ArapDeformer::estimateRotation(){
+
+    //#pragma omp parallel for
     for(int vertexID=0; vertexID< m_num_v; vertexID++){
         Matrix3d rotation = Matrix3d::Identity();
         vector<int> neighbors = m_mesh.getNeighborsOf(vertexID);
@@ -91,6 +94,7 @@ bool ArapDeformer::isInConstraints(int i) {
 
 void ArapDeformer::updateB(){
     m_b = MatrixXd::Zero(m_num_v, 3);
+    // #pragma omp parallel for
     for ( int i = 0; i< m_num_v; i++)
     {
         Vector3d sum(0.0f, 0.0f, 0.0f);
@@ -211,14 +215,15 @@ double ArapDeformer::calculateEnergy(){
 void ArapDeformer::buildWeightMatrix(){
     std::cout << "Generating Weight Matrix" << endl;
     if(USE_CONSTANT_WEIGHTS){
-        std::cout << "Using constant weights" << endl;
         m_weight_matrix = MatrixXd::Ones(m_num_v, m_num_v);
+        // std::cout << "Using constant weights" << endl;
     }
     else{
         m_weight_matrix = MatrixXd::Zero(m_num_v, m_num_v);
+        //#pragma omp parallel for
         for (int i = 0; i < m_num_v; i++) {
             if(USE_UNIFORM_WEIGHTS){
-                std::cout << "Using uniform weights" << endl;
+                // std::cout << "Using uniform weights" << endl;
                 double weight_ij = m_mesh.computeUniformWeightForVertex(i);
                 vector<int> neighbors = m_mesh.getNeighborsOf(i);
                 for (int j : neighbors){
@@ -226,7 +231,7 @@ void ArapDeformer::buildWeightMatrix(){
                 }
             }
             if (USE_COTANGENT_WEIGHTS){
-                std::cout << "Using cotangent weights" << endl;
+                // std::cout << "Using cotangent weights" << endl;
                 vector<int> neighbors = m_mesh.getNeighborsOf(i);
                 for (int j : neighbors){
                     double weight_ij = 0;
@@ -247,7 +252,9 @@ void ArapDeformer::buildWeightMatrix(){
 
 void ArapDeformer::calculateSystemMatrix(){
     m_system_matrix = MatrixXd::Zero(m_num_v, m_num_v);
+    //#pragma omp parallel for
     for (int i = 0; i < m_num_v; i++) {
+        // cout<<"OpenMP Thread "<<omp_get_thread_num()<<endl;
         vector<int> neighbors = m_mesh.getNeighborsOf(i);
         int numNeighbors = neighbors.size();
         for (int j = 0; j < numNeighbors; ++j){
@@ -256,23 +263,14 @@ void ArapDeformer::calculateSystemMatrix(){
             m_system_matrix(i, neighborVertex) = -m_weight_matrix(i, neighborVertex);
         }
     }
-   
-    // for (Constraint c : m_constraints) {
-    //     int i = c.vertexID;
-    //     m_system_matrix.row(i).setZero();
-    //     m_system_matrix(i, i) = 1;
-    // }
 
     m_system_matrix_original = m_system_matrix;
-
-    // if (USE_SPARSE_MATRICES)
-    //     m_system_matrix_sparse = m_system_matrix.sparseView();
-
 }
 
 void ArapDeformer::updateSystemMatrix(){
 
     m_system_matrix = m_system_matrix_original;
+    // #pragma omp parallel for
     for (Constraint c : m_constraints) {
         int i = c.vertexID;
         m_system_matrix.row(i).setZero();
@@ -298,7 +296,8 @@ void ArapDeformer::initDeformation(vector<int> fixed_points){
 
 void ArapDeformer::applyDeformation(vector<int> fixed_points, int handleID, Vector3d handleNewPosition, int iterations) {
     m_constraints.clear();
-
+    // #pragma omp declare reduction (merge : vector<Constraint> : omp_out.insert(omp_out.end(), omp_in.begin(), omp_in.end()))
+    // #pragma omp parallel for reduction(merge: m_constraints)
     for (int i : fixed_points) {
         Constraint c;
         c.vertexID = i;
@@ -310,12 +309,11 @@ void ArapDeformer::applyDeformation(vector<int> fixed_points, int handleID, Vect
 
     m_handle_id = handleID;
     m_new_handle_position = handleNewPosition;
-    // calculateSystemMatrix();
 
     std::cout << "handleID " << m_handle_id << endl;
     std::cout << "# fixed Vertices " << m_constraints.size() << endl;
     std::cout <<"Using sparse matrices: "<<USE_SPARSE_MATRICES<<endl;
-    //std::cout << "NonZeros in sparse matrix: "<<m_system_matrix_sparse.nonZeros()<<endl;
+    // std::cout << "NonZeros in sparse matrix: "<<m_system_matrix_sparse.nonZeros()<<endl;
 
     setHandleConstraint(handleID, handleNewPosition);
     double energy = 999.0f;

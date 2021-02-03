@@ -6,6 +6,7 @@
 
 #include "Eigen.h"
 #include "SimpleMesh.h"
+//#include <omp.h>
 using namespace std;
 
 #define THRESHOLD 1.0e-3f
