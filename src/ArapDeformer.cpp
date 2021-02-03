@@ -93,7 +93,7 @@ bool ArapDeformer::isInConstraints(int i) {
 
 void ArapDeformer::updateB(){
     m_b = MatrixXf::Zero(m_num_v, 3);
-    // #pragma omp parallel for
+    #pragma omp parallel for
     for ( int i = 0; i< m_num_v; i++)
     {
         Vector3f sum(0.0f, 0.0f, 0.0f);
@@ -269,7 +269,7 @@ void ArapDeformer::calculateSystemMatrix(){
 void ArapDeformer::updateSystemMatrix(){
 
     m_system_matrix = m_system_matrix_original;
-    // #pragma omp parallel for
+    #pragma omp parallel for
     for (Constraint c : m_constraints) {
         int i = c.vertexID;
         m_system_matrix.row(i).setZero();
@@ -283,8 +283,8 @@ void ArapDeformer::updateSystemMatrix(){
 void ArapDeformer::applyDeformation(vector<int> fixed_points, int handleID, Vector3f handleNewPosition, int iterations){
 
     m_constraints.clear();
-    // #pragma omp declare reduction (merge : vector<Constraint> : omp_out.insert(omp_out.end(), omp_in.begin(), omp_in.end()))
-    // #pragma omp parallel for reduction(merge: m_constraints)
+     #pragma omp declare reduction (merge : vector<Constraint> : omp_out.insert(omp_out.end(), omp_in.begin(), omp_in.end()))
+     #pragma omp parallel for reduction(merge: m_constraints)
     for (int i : fixed_points) {
         Constraint c;
         c.vertexID = i;
