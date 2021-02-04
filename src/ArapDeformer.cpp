@@ -253,10 +253,10 @@ double ArapDeformer::calculateEnergy(){
 
         for ( int j : neighbors)
         {
-            Vector3d v= ((m_mesh.getDeformedVertex(i) - m_mesh.getDeformedVertex(j)) - m_cell_rotations[i] * (m_mesh.getVertex(i) - m_mesh.getVertex(j))); 
-            cell_energy = m_weight_matrix(i, j) * v.norm();
-            energy += cell_energy;
+            Vector3d v = ((m_mesh.getDeformedVertex(i) - m_mesh.getDeformedVertex(j)) - m_cell_rotations[i] * (m_mesh.GetVertexOriginal(i) - m_mesh.GetVertexOriginal(j)));//(m_mesh.getVertex(i) - m_mesh.getVertex(j))); 
+            cell_energy += m_weight_matrix(i, j) * v.squaredNorm();
         } 
+        energy += m_weight_matrix(i, i) * cell_energy;   
     }
     return energy;
 }
@@ -291,6 +291,7 @@ void ArapDeformer::buildWeightMatrix(){
                     m_weight_matrix(i, j) = weight_ij;
                 }
             }
+            m_weight_matrix(i, i) = 1;
         }
     }
     
@@ -325,12 +326,12 @@ void ArapDeformer::calculateSystemMatrix(){
 
 void ArapDeformer::updateSystemMatrix(){
 
-    m_system_matrix = m_system_matrix_original;
-    for (Constraint c : m_constraints) {
-        int i = c.vertexID;
-        m_system_matrix.row(i).setZero();
-        m_system_matrix(i, i) = 1;
-    }
+	m_system_matrix = m_system_matrix_original;
+	for (Constraint c : m_constraints) {
+		int i = c.vertexID;
+		m_system_matrix.row(i).setZero();
+		m_system_matrix(i, i) = 1;
+	}
 
     if (use_sparse_matrices)
         m_system_matrix_sparse = m_system_matrix.sparseView();
@@ -373,7 +374,7 @@ void ArapDeformer::applyDeformation(vector<int> fixed_points, int handleID, Vect
     setHandleConstraint(handleID, handleNewPosition);
     double energy = 999.0f;
     int iter = 0;
-    cout << "Applying deformation for handle with ID " << handleID << " to new position " << handleNewPosition.x() << "," << handleNewPosition.y() << "," << handleNewPosition.z() << endl;
+    cout << "Applying deformation for handle with ID " << handleID << " at position " << m_mesh.getVertex(handleID).transpose()<< " to new position " << handleNewPosition.x() << "," << handleNewPosition.y() << "," << handleNewPosition.z() << endl;
 
     while (iter < iterations && abs(energy) > THRESHOLD) {
         cout << "[Iteration " << iter << "]" << endl;

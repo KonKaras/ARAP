@@ -86,26 +86,18 @@ int main() {
 		}
 	} while (isInvalid);
 
-	bool debug = false;
+	bool debug = true;
 	if (!debug) {
 		GUI* gui = new GUI(filenameMesh, 3, weight_type, estimation_type);
     }
     else{
 		vector<int> fixedPoints;
-		fixedPoints.push_back(0);
-		//fixedPoints.push_back(1);
-		// fixedPoints.push_back(2);
-		// fixedPoints.push_back(3);
-		fixedPoints.push_back(4);
-		// fixedPoints.push_back(5);
-		fixedPoints.push_back(7);
-		//fixedPoints.push_back(10);
-		//fixedPoints.push_back(14);
-		// fixedPoints.push_back(9);
-		int handleID = 7;
-		Vector3d handleMoved(1, 2, 1);
+		for (int i = 0; i <= 20; i++) {
+			fixedPoints.push_back(i);
+			fixedPoints.push_back(420+i);
+		}
+		fixedPoints.push_back(199);
 
-	
 		SimpleMesh sourceMesh;
 		if (!sourceMesh.loadMesh(filenameMesh)) {
 			std::cout << "Mesh file wasn't read successfully at location: " << filenameMesh << std::endl;
@@ -113,12 +105,15 @@ int main() {
 		}
 
 		ArapDeformer deformer(&sourceMesh, weight_type, estimation_type);
-	
+
+		int handleID = 199;
+		Vector3d handleMoved = sourceMesh.getVertex(handleID) + Vector3d(0,0,0.5);
+
 		auto t1 = std::chrono::high_resolution_clock::now();
 		//deformer.initDeformation(fixedPoints);
-		deformer.applyDeformation(fixedPoints, handleID, handleMoved, 3);
+		deformer.applyDeformation(fixedPoints, handleID, handleMoved, 20);
 		deformer.m_mesh.writeMesh("../data/bunny/deformedMesh1.off");
-
+		/*
 		fixedPoints.clear();
 		fixedPoints.push_back(0);
 		//fixedPoints.push_back(1);
@@ -134,12 +129,10 @@ int main() {
 		handleMoved = Vector3d(1, 2, 2);
 		//deformer.initDeformation(fixedPoints);
 		deformer.applyDeformation(fixedPoints, handleID, handleMoved, 3);
+		*/
 		auto t2 = std::chrono::high_resolution_clock::now();
 		std::chrono::duration<double> eps = t2 - t1;
 		std::cout << "Deformation completed in "<< eps.count() <<" seconds." << std::endl;
-
-		// sourceMesh.writeMesh("../data/bunny/deformedMesh.off"); 
-
 	}
 	return 0;
 }

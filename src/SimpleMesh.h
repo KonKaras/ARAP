@@ -101,7 +101,7 @@ public:
 
 				m_vertices.push_back(v);
 				m_vertices_prime.push_back(v);
-
+				m_vertices_original.push_back(v);
 			}
 		}
 		else {
@@ -197,6 +197,7 @@ public:
 				v.color = Vector4uc((unsigned char)colorInt.x(), (unsigned char)colorInt.y(), (unsigned char)colorInt.z(), (unsigned char)colorInt.w());
 				m_vertices.push_back(v);
 				m_vertices_prime.push_back(v);
+				m_vertices_original.push_back(v);
 			}
 		}
 		else if (std::string(string1).compare("OFF") == 0) {
@@ -210,6 +211,7 @@ public:
 				v.color.w() = 255;
 				m_vertices.push_back(v);
 				m_vertices_prime.push_back(v);
+				m_vertices_original.push_back(v);
 			}
 		}
 		else {
@@ -456,9 +458,15 @@ public:
 		return true;
 	}
 
+	Vector3d GetVertexOriginal(int i) {
+		return m_vertices_original[i].position;
+	}
+
+
 private:
 	vector<Vertex> m_vertices;
 	vector<Vertex> m_vertices_prime;
+	vector<Vertex> m_vertices_original;
 	vector<Triangle> m_triangles;
 	MatrixXd m_neighbor_matrix;
 	vector<std::vector<unsigned int>> m_vertices_to_faces;
