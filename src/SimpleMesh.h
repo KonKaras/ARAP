@@ -206,9 +206,9 @@ public:
 			for (unsigned int i = 0; i < num_v; i++) {
 				Vertex v;
 				file >> v.position.x() >> v.position.y() >> v.position.z();
-				v.color.x() = 0;
-				v.color.y() = 0;
-				v.color.z() = 0;
+				v.color.x() = 255;
+				v.color.y() = 255;
+				v.color.z() = 255;
 				v.color.w() = 255;
 				m_vertices.push_back(v);
 				m_vertices_prime.push_back(v);

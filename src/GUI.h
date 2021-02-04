@@ -64,6 +64,10 @@ private:
 		//load mesh
 		igl::readOFF(filenameMesh, vertices, faces);
 		meshName = filenameMesh;
+		if (!sourceMesh.loadMesh(filenameMesh)) {
+			std::cout << "Mesh file wasn't read successfully at location: " << filenameMesh << std::endl;
+			return;
+		}
 
 		//init white
 		colors = Eigen::MatrixXd::Constant(faces.rows(), 3, 1);
@@ -76,7 +80,8 @@ private:
 		std::cout << "(Usage: [press 2]  Select Static Faces)" << std::endl;
 		std::cout << "(Usage: [press 3]  Select Handles)" << std::endl;
 		std::cout << "(Usage: [press 4]  Start ARAP Mode)" << std::endl;
-		std::cout << "ARAP active" << std::endl;
+		std::cout << "(Usage: [press 5]  Save Current Mesh)" << std::endl;
+		std::cout << "Static Vertices Selection active, ARAP Paused" << std::endl;
 
 		igl::opengl::glfw::Viewer viewer;
 
@@ -219,6 +224,15 @@ private:
 				std::string out = "ARAP active";
 				std::cout << out << std::endl;
 				return true;
+			}
+			if (key == '5') {
+				if (deformerInitiated) {
+					deformer.m_mesh.writeMesh("../data/bunny/outputMesh.off");
+				}
+				else {
+					sourceMesh.writeMesh("../data/bunny/outputMesh.off");
+				}
+				std::cout <<  "Current mesh saved." << std::endl;
 			}
 			return true;
 		};
