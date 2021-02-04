@@ -227,7 +227,7 @@ private:
 		viewer.data().set_mesh(vertices, faces);
 
 		//viewer.data().add_points(vertices, Eigen::RowVector3d(1, 0, 0));
-
+		viewer.data().point_size = 10;
 		viewer.data().set_colors(colors);
 		viewer.data().show_lines = true;
 		
@@ -239,7 +239,7 @@ private:
 		if (arapInitialized && !arapRunning) {
 			arapRunning = true;
 			deformer.applyDeformation(GetStaticVerticesFromFaces(), currentMovingHandle, handlePos.cast<double>(), num_iterations); // Hier passiert die flipflop optimization mit 3 iterationen
-			std::vector<Vertex> deformedVertices = deformer.m_mesh.getVertices();
+			std::vector<Vertex> deformedVertices = deformer.m_mesh.getDeformedVertices();
 			sourceMesh = deformer.m_mesh;
 			cout << "GUI[handleID] is " << deformedVertices[currentMovingHandle].position.x() << "," << deformedVertices[currentMovingHandle].position.y() << "," << deformedVertices[currentMovingHandle].position.z() << endl;
 			//MatrixXd deformedVerticesMat(deformedVertices.size(), 3);

@@ -2,6 +2,11 @@
 
 typedef Eigen::Triplet<double> T;
 
+ArapDeformer::~ArapDeformer()
+{
+    m_mesh.writeMesh("../data/bunny/deformdedMesh.off");
+}
+
 ArapDeformer::ArapDeformer(){}
 
 ArapDeformer::ArapDeformer(SimpleMesh *mesh, int weight_type, int estimation_type) {
@@ -330,6 +335,7 @@ void ArapDeformer::updateSystemMatrix(){
 	for (Constraint c : m_constraints) {
 		int i = c.vertexID;
 		m_system_matrix.row(i).setZero();
+		//m_system_matrix.col(i).setZero();
 		m_system_matrix(i, i) = 1;
 	}
 
@@ -342,7 +348,7 @@ void ArapDeformer::initDeformation(vector<int> fixed_points){
     for (int i : fixed_points) {
         Constraint c;
         c.vertexID = i;
-        c.position = m_mesh.getVertex(i);
+        c.position = m_mesh.GetVertexOriginal(i);
         m_constraints.push_back(c);
     }
     updateSystemMatrix();
@@ -356,7 +362,7 @@ void ArapDeformer::applyDeformation(vector<int> fixed_points, int handleID, Vect
     for (int i : fixed_points) {
         Constraint c;
         c.vertexID = i;
-        c.position = m_mesh.getVertex(i);
+        c.position = m_mesh.GetVertexOriginal(i);
         m_constraints.push_back(c);
     }
 
@@ -398,5 +404,5 @@ void ArapDeformer::applyDeformation(vector<int> fixed_points, int handleID, Vect
     }
     std::cout << "Resulting energy: "<< energy<< endl; 
     std::cout << "PPrime[handleID] is "<< m_mesh.getDeformedVertex(handleID).x() <<","<< m_mesh.getDeformedVertex(handleID).y()<< ","<< m_mesh.getDeformedVertex(handleID).z()<<endl;
-    m_mesh.writeMesh("../data/bunny/deformedMesh.off"); 
+    //m_mesh.writeMesh("../data/bunny/deformedMesh.off"); 
 }

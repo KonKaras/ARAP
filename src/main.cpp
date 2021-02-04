@@ -71,7 +71,7 @@ int main() {
 
 	do {
 		isInvalid = true;
-		std::cout << "Choose type of matrix decomposition (0 = sparse QR, 1 = sparse LU, 2 = non sparce matrices)" << std::endl;
+		std::cout << "Choose type of matrix decomposition (0 = sparse QR, 1 = sparse LU, 2 = non sparse matrices)" << std::endl;
 		std::cin >> estimation_type;
 
 		if (!std::cin.fail()) {
@@ -107,7 +107,7 @@ int main() {
 		ArapDeformer deformer(&sourceMesh, weight_type, estimation_type);
 
 		int handleID = 199;
-		Vector3d handleMoved = sourceMesh.getVertex(handleID) + Vector3d(0,0,0.5);
+		Vector3d handleMoved = sourceMesh.GetVertexOriginal(handleID) + Vector3d(0,0,0.5);
 
 		auto t1 = std::chrono::high_resolution_clock::now();
 		//deformer.initDeformation(fixedPoints);

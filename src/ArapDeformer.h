@@ -18,6 +18,7 @@ struct Constraint {
 class ArapDeformer {
 
 public:
+    ~ArapDeformer();
     ArapDeformer();
 	ArapDeformer(SimpleMesh *mesh, int weight_type, int estimation_type);
     void initDeformation(vector<int> fixed_points);

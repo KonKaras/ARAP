@@ -74,6 +74,7 @@ public:
 		// Read off file (Important: Only .off files are supported).
 		m_vertices.clear();
 		m_vertices_prime.clear();
+		m_vertices_original.clear();
 		m_triangles.clear();
 		/*m_constraints.clear();
 		m_verticesToFaces.clear();
