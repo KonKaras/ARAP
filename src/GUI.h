@@ -284,10 +284,11 @@ private:
 				std::cout << "Mesh file wasn't read successfully at location: " << meshName << std::endl;
 				return;
 			}
-			if (!deformerInitiated) {
+			//if (!deformerInitiated) {
 				deformer = ArapDeformer(&sourceMesh, weight_type, estimation_type);
 				deformerInitiated = true;
-			}
+			//}
+		
 			staticFacesPreviousInit = staticFaces;
 			handlesPreviousInit = handles;
 			staticVerticesPreviousInit = staticVertices;

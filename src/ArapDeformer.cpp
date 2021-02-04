@@ -87,6 +87,7 @@ void ArapDeformer::setDecompositionType(int estimation_type) {
     }
 }
 
+
 void ArapDeformer::setHandleConstraint(int handleID, Vector3d newHandlePosition){
     for (int i = 0; i < m_constraints.size(); i++) {
         if (m_constraints[i].vertexID == handleID) {
@@ -173,6 +174,7 @@ void ArapDeformer::updateB(){
 void ArapDeformer::estimateVertices(){
     std::cout<<"Solving LES ..." <<endl;
     MatrixXd result;
+
     if(!use_sparse_matrices){
          MatrixXd system_matrix = m_system_matrix;
          static JacobiSVD<Eigen::MatrixXd> svd(system_matrix, Eigen::ComputeThinU | Eigen::ComputeThinV);
