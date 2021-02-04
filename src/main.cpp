@@ -86,9 +86,9 @@ int main() {
 		}
 	} while (isInvalid);
 
-	bool debug = true;
+	bool debug = false;
 	if (!debug) {
-		GUI* gui = new GUI(filenameMesh, 3, weight_type, estimation_type);
+		GUI* gui = new GUI(filenameMesh, 100, weight_type, estimation_type);
     }
     else{
 		vector<int> fixedPoints;
@@ -111,7 +111,7 @@ int main() {
 
 		auto t1 = std::chrono::high_resolution_clock::now();
 		//deformer.initDeformation(fixedPoints);
-		deformer.applyDeformation(fixedPoints, handleID, handleMoved, 20);
+		deformer.applyDeformation(fixedPoints, handleID, handleMoved, 100);
 		deformer.m_mesh.writeMesh("../data/bunny/deformedMesh1.off");
 		/*
 		fixedPoints.clear();

@@ -107,7 +107,7 @@ void ArapDeformer::estimateRotation(){
         {   
             int neighborVertex = neighbors[j];
             PPrime.col(j) = m_mesh.getDeformedVertex(vertexID) - m_mesh.getDeformedVertex(neighborVertex);
-            P.col(j) = m_mesh.getVertex(vertexID) - m_mesh.getVertex(neighborVertex);
+            P.col(j) = m_mesh.GetVertexOriginal(vertexID) - m_mesh.GetVertexOriginal(neighborVertex);
             D(j,j) = m_weight_matrix(vertexID, neighborVertex);
         } 
 
@@ -156,7 +156,7 @@ void ArapDeformer::updateB(){
             for ( int neighborID : neighbors)
             {
                 double w_ij = m_weight_matrix(i, neighborID);
-                sum += w_ij * 0.5 * (m_cell_rotations[i] + m_cell_rotations[neighborID])*(m_mesh.getVertex(i) - m_mesh.getVertex(neighborID));
+                sum += w_ij * 0.5 * (m_cell_rotations[i] + m_cell_rotations[neighborID])*(m_mesh.GetVertexOriginal(i) - m_mesh.GetVertexOriginal(neighborID));
             }
         }
         m_b.row(i) = sum;
@@ -372,11 +372,12 @@ void ArapDeformer::applyDeformation(vector<int> fixed_points, int handleID, Vect
     //std::cout << "NonZeros in sparse matrix: "<<m_system_matrix_sparse.nonZeros()<<endl;
 
     setHandleConstraint(handleID, handleNewPosition);
-    double energy = 999.0f;
+    double energy = 0;
+    double energy_prev = 1;
     int iter = 0;
     cout << "Applying deformation for handle with ID " << handleID << " at position " << m_mesh.getVertex(handleID).transpose()<< " to new position " << handleNewPosition.x() << "," << handleNewPosition.y() << "," << handleNewPosition.z() << endl;
 
-    while (iter < iterations && abs(energy) > THRESHOLD) {
+    while (iter < iterations) {
         cout << "[Iteration " << iter << "]" << endl;
 
         estimateRotation();
@@ -389,6 +390,10 @@ void ArapDeformer::applyDeformation(vector<int> fixed_points, int handleID, Vect
         m_mesh.copyPPrime();
 
         energy = energy_i;
+
+        if (abs(energy_prev - energy) < THRESHOLD) break;
+
+        energy_prev = energy;
         iter++;
     }
     std::cout << "Resulting energy: "<< energy<< endl; 
