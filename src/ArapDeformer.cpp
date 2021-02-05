@@ -157,6 +157,7 @@ void ArapDeformer::updateB(){
 void ArapDeformer::estimateVertices(){
     std::cout<<"Solving LES ..." <<endl;
     MatrixXd result;
+
     if(!use_sparse_matrices){
          MatrixXd system_matrix = m_system_matrix;
          static JacobiSVD<Eigen::MatrixXd> svd(system_matrix, Eigen::ComputeThinU | Eigen::ComputeThinV);

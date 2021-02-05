@@ -41,6 +41,7 @@ private:
     void setWeightType(int weight_type);
     void setDecompositionType(int estimation_type);
 
+
     vector<MatrixXd> m_cell_rotations;
     MatrixXd m_system_matrix;
     MatrixXd m_system_matrix_original;

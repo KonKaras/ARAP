@@ -98,16 +98,16 @@ int main() {
 		}
 		fixedPoints.push_back(199);
 
-		SimpleMesh sourceMesh;
-		if (!sourceMesh.loadMesh(filenameMesh)) {
+		SimpleMesh source_mesh;
+		if (!source_mesh.loadMesh(filenameMesh)) {
 			std::cout << "Mesh file wasn't read successfully at location: " << filenameMesh << std::endl;
 			return -1;
 		}
 
-		ArapDeformer deformer(&sourceMesh, weight_type, estimation_type);
+		ArapDeformer deformer(&source_mesh, weight_type, estimation_type);
 
 		int handleID = 199;
-		Vector3d handleMoved = sourceMesh.GetVertexOriginal(handleID) + Vector3d(0,0,0.5);
+		Vector3d handleMoved = source_mesh.GetVertexOriginal(handleID) + Vector3d(0,0,0.5);
 
 		auto t1 = std::chrono::high_resolution_clock::now();
 		//deformer.initDeformation(fixedPoints);
