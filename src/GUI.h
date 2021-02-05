@@ -241,7 +241,9 @@ private:
 				}
 				std::cout <<  "Current mesh saved." << std::endl;
 				*/
-				viewer.save_mesh_to_file("../data/outputMesh.off");
+				//viewer.save_mesh_to_file("../data/outputMesh.off");
+				viewer.open_dialog_save_mesh();
+				return true;
 			}
 			return true;
 		};
