@@ -46,40 +46,22 @@ void ArapDeformer::setWeightType(int weight_type) {
     }
 }
 
+// Based on the user's selection use sparse or dense system matrix and solving method
 void ArapDeformer::setDecompositionType(int estimation_type) {
-    /*if (estimation_type == 0) {
-        use_simplicial_ldlt = true;
-        use_simplicial_llt = false;
-        use_sparse_qr = false;
-        use_sparse_lu = false;
-    }
-    else if (estimation_type == 1) {
-        use_simplicial_ldlt = false;
-        use_simplicial_llt = true;
-        use_sparse_qr = false;
-        use_sparse_lu = false;
-    }
-    else */
     if (estimation_type == 0) {
-        use_simplicial_ldlt = false;
-        use_simplicial_llt = false;
         use_sparse_qr = true;
         use_sparse_lu = false;
     }
     else if(estimation_type == 1) {
-        use_simplicial_ldlt = false;
-        use_simplicial_llt = false;
         use_sparse_qr = false;
         use_sparse_lu = true;
     }
     else if(estimation_type == 2){
-        use_simplicial_ldlt = false;
-        use_simplicial_llt = false;
         use_sparse_qr = false;
         use_sparse_lu = false;
     }
 
-    if (use_simplicial_ldlt || use_simplicial_llt || use_sparse_qr || use_sparse_lu) {
+    if ( use_sparse_qr || use_sparse_lu) {
         use_sparse_matrices = true;
     }
     else {
@@ -87,16 +69,16 @@ void ArapDeformer::setDecompositionType(int estimation_type) {
     }
 }
 
+// Incorporate new handle position into constraints
 void ArapDeformer::setHandleConstraint(int handleID, Vector3d newHandlePosition){
     for (int i = 0; i < m_constraints.size(); i++) {
         if (m_constraints[i].vertexID == handleID) {
-            //std::cout<<"Setting handle constraint"<<endl;
             m_constraints[i].position = newHandlePosition;
         }
     }
 }
 
-
+// Assume vertices are fixed, only rotations per vertex are estimated with Procrustes
 void ArapDeformer::estimateRotation(){
     for(int vertexID=0; vertexID< m_num_v; vertexID++){
         Matrix3d rotation = Matrix3d::Identity();
@@ -129,6 +111,7 @@ void ArapDeformer::estimateRotation(){
     }
 }
 
+
 Vector3d ArapDeformer::getConstraintI(int id) {
     for (Constraint c : m_constraints) {
         if (c.vertexID == id) {
@@ -138,6 +121,7 @@ Vector3d ArapDeformer::getConstraintI(int id) {
     throw std::invalid_argument("received id which is not in fixed vertices");
 }
 
+// check if vertex with ID i is in fixed points
 bool ArapDeformer::isInConstraints(int i) {
 	for (Constraint c : m_constraints) {
 		if (c.vertexID == i) return true;
@@ -145,7 +129,7 @@ bool ArapDeformer::isInConstraints(int i) {
 	return false;
 }
 
-
+// Set the right hand side of the LES according to constraints
 void ArapDeformer::updateB(){
     m_b = MatrixXd::Zero(m_num_v, 3);
     for ( int i = 0; i< m_num_v; i++)
@@ -169,7 +153,7 @@ void ArapDeformer::updateB(){
 }
 
 
-
+// Assume rotations fixed, only optimize for vertex positions by solving the LES system_matrix * p_prime = b
 void ArapDeformer::estimateVertices(){
     std::cout<<"Solving LES ..." <<endl;
     MatrixXd result;
@@ -180,37 +164,6 @@ void ArapDeformer::estimateVertices(){
          m_mesh.setPPrime(result);
     }
     else{
-        /*if(use_simplicial_ldlt){
-            SimplicialLDLT<SparseMatrix<double>> solver;
-            solver.compute(m_system_matrix_sparse);
-            if(solver.info()!=Success) {
-                cout<<"Decomposition failed!"<<endl;
-                return;
-            }
-            result = solver.solve(m_b);
-            if(solver.info()!=Success) {
-                cout<<"Solving failed"<<endl;
-                return;
-            }
-            //std::cout<<"Result:" <<endl;
-            //std::cout<<result<<endl;
-            m_mesh.setPPrime(result); 
-        }
-        else if(use_simplicial_llt){
-            SimplicialLLT<SparseMatrix<double>, Lower, NaturalOrdering<int>> solver;
-            solver.compute(m_system_matrix_sparse);
-            if(solver.info()!=Success) {
-                cout<<"Decomposition failed!"<<endl;
-                return;
-            }
-            result = solver.solve(m_b);
-            if(solver.info()!=Success) {
-                cout<<"Solving failed"<<endl;
-                return;
-            }
-            m_mesh.setPPrime(result);
-        }
-        else */
         if(use_sparse_lu){
             SparseLU<SparseMatrix<double>> solver;
             solver.compute(m_system_matrix_sparse);
@@ -249,7 +202,7 @@ void ArapDeformer::estimateVertices(){
 }
 
 
-
+// The energy is needed to check if threshold is reached and for performance analysis
 double ArapDeformer::calculateEnergy(){
     double energy= 0.0f;
     for(int i=0; i<m_num_v; i++){
@@ -266,17 +219,16 @@ double ArapDeformer::calculateEnergy(){
     return energy;
 }
 
+// Depending on user's choice either constant, uniform or cotangent weights are used
 void ArapDeformer::buildWeightMatrix(){
     std::cout << "Generating Weight Matrix" << endl;
     if(use_constant_weights){
-        std::cout << "Using constant weights" << endl;
         m_weight_matrix = MatrixXd::Ones(m_num_v, m_num_v);
     }
     else{
         m_weight_matrix = MatrixXd::Zero(m_num_v, m_num_v);
         for (int i = 0; i < m_num_v; i++) {
             if(use_uniform_weights){
-                std::cout << "Using uniform weights" << endl;
                 double weight_ij = m_mesh.computeUniformWeightForVertex(i);
                 vector<int> neighbors = m_mesh.getNeighborsOf(i);
                 for (int j : neighbors){
@@ -284,7 +236,6 @@ void ArapDeformer::buildWeightMatrix(){
                 }
             }
             if (use_cotangent_weights){
-                std::cout << "Using cotangent weights" << endl;
                 vector<int> neighbors = m_mesh.getNeighborsOf(i);
                 for (int j : neighbors){
                     double weight_ij = 0;
@@ -299,11 +250,9 @@ void ArapDeformer::buildWeightMatrix(){
             m_weight_matrix(i, i) = 1;
         }
     }
-    
-    //std::cout<<"Weight matrix: "<<m_weight_matrix<<endl;
 } 
 
-
+// The left hand sie of the LES is built once when an ArapDeformer object is initialized
 void ArapDeformer::calculateSystemMatrix(){
     m_system_matrix = MatrixXd::Zero(m_num_v, m_num_v);
     for (int i = 0; i < m_num_v; i++) {
@@ -316,26 +265,16 @@ void ArapDeformer::calculateSystemMatrix(){
         }
     }
    
-    // for (Constraint c : m_constraints) {
-    //     int i = c.vertexID;
-    //     m_system_matrix.row(i).setZero();
-    //     m_system_matrix(i, i) = 1;
-    // }
-
+    // A copy is saved
     m_system_matrix_original = m_system_matrix;
-
-    // if (USE_SPARSE_MATRICES)
-    //     m_system_matrix_sparse = m_system_matrix.sparseView();
-
 }
 
+// At the beginning of a deformation the system_matrix is reset to the original system matrix of the original mesh
 void ArapDeformer::updateSystemMatrix(){
-
 	m_system_matrix = m_system_matrix_original;
 	for (Constraint c : m_constraints) {
 		int i = c.vertexID;
 		m_system_matrix.row(i).setZero();
-		//m_system_matrix.col(i).setZero();
 		m_system_matrix(i, i) = 1;
 	}
 
@@ -343,18 +282,19 @@ void ArapDeformer::updateSystemMatrix(){
         m_system_matrix_sparse = m_system_matrix.sparseView();
 }
 
-void ArapDeformer::initDeformation(vector<int> fixed_points){
-    m_constraints.clear();
-    for (int i : fixed_points) {
-        Constraint c;
-        c.vertexID = i;
-        c.position = m_mesh.GetVertexOriginal(i);
-        m_constraints.push_back(c);
-    }
-    updateSystemMatrix();
 
-    calculateSystemMatrix();
-}
+// void ArapDeformer::initDeformation(vector<int> fixed_points){
+//     m_constraints.clear();
+//     for (int i : fixed_points) {
+//         Constraint c;
+//         c.vertexID = i;
+//         c.position = m_mesh.GetVertexOriginal(i);
+//         m_constraints.push_back(c);
+//     }
+//     updateSystemMatrix();
+
+//     calculateSystemMatrix();
+// }
 
 void ArapDeformer::applyDeformation(vector<int> fixed_points, int handleID, Vector3d handleNewPosition, int iterations) {
     m_constraints.clear();
@@ -370,12 +310,10 @@ void ArapDeformer::applyDeformation(vector<int> fixed_points, int handleID, Vect
 
     m_handle_id = handleID;
     m_new_handle_position = handleNewPosition;
-    // calculateSystemMatrix();
 
-    std::cout << "handleID " << m_handle_id << endl;
-    std::cout << "# fixed Vertices " << m_constraints.size() << endl;
+    std::cout << "handleID: " << m_handle_id << endl;
+    std::cout << "Number of fixed vertices: " << m_constraints.size() << endl;
     std::cout <<"Using sparse matrices: "<<use_sparse_matrices<<endl;
-    //std::cout << "NonZeros in sparse matrix: "<<m_system_matrix_sparse.nonZeros()<<endl;
 
     setHandleConstraint(handleID, handleNewPosition);
     double energy = 0;
@@ -394,7 +332,6 @@ void ArapDeformer::applyDeformation(vector<int> fixed_points, int handleID, Vect
         std::cout<< "Iteration: "<< iter<< "  Local error: "<< energy_i << endl;
 
         m_mesh.copyPPrime();
-
         energy = energy_i;
 
         if (abs(energy_prev - energy) < THRESHOLD) break;
@@ -403,6 +340,4 @@ void ArapDeformer::applyDeformation(vector<int> fixed_points, int handleID, Vect
         iter++;
     }
     std::cout << "Resulting energy: "<< energy<< endl; 
-    std::cout << "PPrime[handleID] is "<< m_mesh.getDeformedVertex(handleID).x() <<","<< m_mesh.getDeformedVertex(handleID).y()<< ","<< m_mesh.getDeformedVertex(handleID).z()<<endl;
-    //m_mesh.writeMesh("../data/bunny/deformedMesh.off"); 
 }

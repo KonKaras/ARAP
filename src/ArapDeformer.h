@@ -8,12 +8,14 @@
 #include "SimpleMesh.h"
 using namespace std;
 
-#define THRESHOLD 1.0e-3f
+#define THRESHOLD 1.0e-3f // Threshold for ending optimization
 
+//The fixed points and handles are represented as constraints
 struct Constraint {
 	int vertexID;
 	Vector3d position;
 };
+
 
 class ArapDeformer {
 
@@ -21,13 +23,12 @@ public:
     ~ArapDeformer();
     ArapDeformer();
 	ArapDeformer(SimpleMesh *mesh, int weight_type, int estimation_type);
-    void initDeformation(vector<int> fixed_points);
+    // void initDeformation(vector<int> fixed_points);
     void setHandleConstraint(int handleID, Vector3d newHandlePosition);
     void applyDeformation(vector<int> fixed_points, int handleID, Vector3d handleNewPosition, int iterations);
     SimpleMesh m_mesh;
 
 private:
-
     void estimateRotation();
     void updateB();
     void estimateVertices();
@@ -54,8 +55,6 @@ private:
     bool use_uniform_weights;
     bool use_constant_weights;
     bool use_cotangent_weights;
-    bool use_simplicial_ldlt;
-    bool use_simplicial_llt;
     bool use_sparse_qr;
     bool use_sparse_lu;
     bool use_sparse_matrices;
