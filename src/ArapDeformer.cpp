@@ -157,7 +157,7 @@ void ArapDeformer::updateB(){
 
 // Assume rotations fixed, only optimize for vertex positions by solving the LES system_matrix * p_prime = b
 void ArapDeformer::estimateVertices(){
-    std::cout<<"Solving LES ..." <<endl;
+    //std::cout<<"Solving LES ..." <<endl;
     MatrixXd result;
 
     if(!use_sparse_matrices){
@@ -201,7 +201,7 @@ void ArapDeformer::estimateVertices(){
             return;
         }
     }
-    std::cout<<"Done!"<<endl;
+    //std::cout<<"Done!"<<endl;
 }
 
 
@@ -224,7 +224,7 @@ double ArapDeformer::calculateEnergy(){
 
 // Depending on user's choice either constant, uniform or cotangent weights are used
 void ArapDeformer::buildWeightMatrix(){
-    std::cout << "Generating Weight Matrix" << endl;
+    //std::cout << "Generating Weight Matrix" << endl;
     if(use_constant_weights){
         m_weight_matrix = MatrixXd::Ones(m_num_v, m_num_v);
     }
@@ -324,19 +324,19 @@ void ArapDeformer::applyDeformation(vector<int> fixed_points, int handleID, Vect
 
     setHandleConstraint(handleID, handleNewPosition);
     double energy = 0;
-    double energy_prev = 1;
+    double energy_prev = 10;
     int iter = 0;
-    cout << "Applying deformation for handle with ID " << handleID << " at position " << m_mesh.getVertex(handleID).transpose()<< " to new position " << handleNewPosition.x() << "," << handleNewPosition.y() << "," << handleNewPosition.z() << endl;
+    //cout << "Applying deformation for handle with ID " << handleID << " at position " << m_mesh.getVertex(handleID).transpose()<< " to new position " << handleNewPosition.x() << "," << handleNewPosition.y() << "," << handleNewPosition.z() << endl;
 
     while (iter < iterations) {
-        cout << "[Iteration " << iter << "]" << endl;
+        //cout << "[Iteration " << iter << "]" << endl;
 
         estimateRotation();
         updateB();
         estimateVertices();
 
         double energy_i = calculateEnergy();        
-        std::cout<< "Iteration: "<< iter<< "  Local error: "<< energy_i << endl;
+        //std::cout<< "Iteration: "<< iter<< "  Local error: "<< energy_i << endl;
 
         m_mesh.copyPPrime();
         energy = energy_i;

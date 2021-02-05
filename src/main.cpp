@@ -34,7 +34,7 @@ int main() {
 	std::string filenameMesh, filename;
 	do {
 		isInvalid = true;
-		filenameMesh = std::string("../data/bunny/");
+		filenameMesh = std::string("../data/");
 		std::cout << "Insert filename: " << std::endl;
 		std::cin >> filename;
 		filenameMesh.append(filename);
@@ -88,7 +88,7 @@ int main() {
 
 	bool debug = false;
 	if (!debug) {
-		GUI* gui = new GUI(filenameMesh, 100, weight_type, estimation_type);
+		GUI* gui = new GUI(filenameMesh, 3, weight_type, estimation_type);
     }
     else{
 		vector<int> fixedPoints;
@@ -111,7 +111,7 @@ int main() {
 
 		auto t1 = std::chrono::high_resolution_clock::now();
 		//deformer.initDeformation(fixedPoints);
-		deformer.applyDeformation(fixedPoints, handleID, handleMoved, 100);
+		deformer.applyDeformation(fixedPoints, handleID, handleMoved, 3);
 		deformer.m_mesh.writeMesh("../data/bunny/deformedMesh1.off");
 		/*
 		fixedPoints.clear();
