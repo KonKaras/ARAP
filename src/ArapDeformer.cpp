@@ -91,7 +91,7 @@ void ArapDeformer::setDecompositionType(int estimation_type) {
 void ArapDeformer::setHandleConstraint(int handleID, Vector3d newHandlePosition){
     for (int i = 0; i < m_constraints.size(); i++) {
         if (m_constraints[i].vertexID == handleID) {
-            //std::cout<<"Setting handle constraint"<<endl;
+            ////std::cout<<"Setting handle constraint"<<endl;
             m_constraints[i].position = newHandlePosition;
         }
     }
@@ -172,7 +172,7 @@ void ArapDeformer::updateB(){
 
 
 void ArapDeformer::estimateVertices(){
-    std::cout<<"Solving LES ..." <<endl;
+    //std::cout<<"Solving LES ..." <<endl;
     MatrixXd result;
 
     if(!use_sparse_matrices){
@@ -194,8 +194,8 @@ void ArapDeformer::estimateVertices(){
                 cout<<"Solving failed"<<endl;
                 return;
             }
-            //std::cout<<"Result:" <<endl;
-            //std::cout<<result<<endl;
+            ////std::cout<<"Result:" <<endl;
+            ////std::cout<<result<<endl;
             m_mesh.setPPrime(result); 
         }
         else if(use_simplicial_llt){
@@ -247,7 +247,7 @@ void ArapDeformer::estimateVertices(){
             return;
         }
     }
-    std::cout<<"Done!"<<endl;
+    //std::cout<<"Done!"<<endl;
 }
 
 
@@ -269,16 +269,16 @@ double ArapDeformer::calculateEnergy(){
 }
 
 void ArapDeformer::buildWeightMatrix(){
-    std::cout << "Generating Weight Matrix" << endl;
+    //std::cout << "Generating Weight Matrix" << endl;
     if(use_constant_weights){
-        std::cout << "Using constant weights" << endl;
+        //std::cout << "Using constant weights" << endl;
         m_weight_matrix = MatrixXd::Ones(m_num_v, m_num_v);
     }
     else{
         m_weight_matrix = MatrixXd::Zero(m_num_v, m_num_v);
         for (int i = 0; i < m_num_v; i++) {
             if(use_uniform_weights){
-                std::cout << "Using uniform weights" << endl;
+                //std::cout << "Using uniform weights" << endl;
                 double weight_ij = m_mesh.computeUniformWeightForVertex(i);
                 vector<int> neighbors = m_mesh.getNeighborsOf(i);
                 for (int j : neighbors){
@@ -286,7 +286,7 @@ void ArapDeformer::buildWeightMatrix(){
                 }
             }
             if (use_cotangent_weights){
-                std::cout << "Using cotangent weights" << endl;
+                //std::cout << "Using cotangent weights" << endl;
                 vector<int> neighbors = m_mesh.getNeighborsOf(i);
                 for (int j : neighbors){
                     double weight_ij = 0;
@@ -302,7 +302,7 @@ void ArapDeformer::buildWeightMatrix(){
         }
     }
     
-    //std::cout<<"Weight matrix: "<<m_weight_matrix<<endl;
+    ////std::cout<<"Weight matrix: "<<m_weight_matrix<<endl;
 } 
 
 
@@ -374,26 +374,26 @@ void ArapDeformer::applyDeformation(vector<int> fixed_points, int handleID, Vect
     m_new_handle_position = handleNewPosition;
     // calculateSystemMatrix();
 
-    std::cout << "handleID " << m_handle_id << endl;
-    std::cout << "# fixed Vertices " << m_constraints.size() << endl;
-    std::cout <<"Using sparse matrices: "<<use_sparse_matrices<<endl;
-    //std::cout << "NonZeros in sparse matrix: "<<m_system_matrix_sparse.nonZeros()<<endl;
+    //std::cout << "handleID " << m_handle_id << endl;
+    //std::cout << "# fixed Vertices " << m_constraints.size() << endl;
+    //std::cout <<"Using sparse matrices: "<<use_sparse_matrices<<endl;
+    ////std::cout << "NonZeros in sparse matrix: "<<m_system_matrix_sparse.nonZeros()<<endl;
 
     setHandleConstraint(handleID, handleNewPosition);
     double energy = 0;
-    double energy_prev = 1;
+    double energy_prev = 10;
     int iter = 0;
-    cout << "Applying deformation for handle with ID " << handleID << " at position " << m_mesh.getVertex(handleID).transpose()<< " to new position " << handleNewPosition.x() << "," << handleNewPosition.y() << "," << handleNewPosition.z() << endl;
+    //cout << "Applying deformation for handle with ID " << handleID << " at position " << m_mesh.getVertex(handleID).transpose()<< " to new position " << handleNewPosition.x() << "," << handleNewPosition.y() << "," << handleNewPosition.z() << endl;
 
     while (iter < iterations) {
-        cout << "[Iteration " << iter << "]" << endl;
+        //cout << "[Iteration " << iter << "]" << endl;
 
         estimateRotation();
         updateB();
         estimateVertices();
 
         double energy_i = calculateEnergy();        
-        std::cout<< "Iteration: "<< iter<< "  Local error: "<< energy_i << endl;
+        //std::cout<< "Iteration: "<< iter<< "  Local error: "<< energy_i << endl;
 
         m_mesh.copyPPrime();
 
@@ -404,7 +404,7 @@ void ArapDeformer::applyDeformation(vector<int> fixed_points, int handleID, Vect
         energy_prev = energy;
         iter++;
     }
-    std::cout << "Resulting energy: "<< energy<< endl; 
-    std::cout << "PPrime[handleID] is "<< m_mesh.getDeformedVertex(handleID).x() <<","<< m_mesh.getDeformedVertex(handleID).y()<< ","<< m_mesh.getDeformedVertex(handleID).z()<<endl;
+    //std::cout << "Resulting energy: "<< energy<< endl; 
+    //std::cout << "PPrime[handleID] is "<< m_mesh.getDeformedVertex(handleID).x() <<","<< m_mesh.getDeformedVertex(handleID).y()<< ","<< m_mesh.getDeformedVertex(handleID).z()<<endl;
     //m_mesh.writeMesh("../data/bunny/deformedMesh.off"); 
 }

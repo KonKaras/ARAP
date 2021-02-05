@@ -66,7 +66,7 @@ private:
 
 		//initialize our mesh structures based on loaded mesh
 		if (!source_mesh.loadMesh(filenameMesh)) {
-			std::cout << "Mesh file wasn't read successfully at location: " << filenameMesh << std::endl;
+			//std::cout << "Mesh file wasn't read successfully at location: " << filenameMesh << std::endl;
 			return;
 		}
 
@@ -76,16 +76,16 @@ private:
 		bool arapModeRef = arap_mode;
 		bool handleSelectionModeRef = handle_selection_mode;
 
-		std::cout << "(Usage: [click]  Pick face on object)" << std::endl;
-		std::cout << "(Usage: [press 1]  Select Fixed Vertices)" << std::endl;
-		std::cout << "(Usage: [press 2]  Select Fixed Faces)" << std::endl;
-		std::cout << "(Usage: [press 3]  Select Handles)" << std::endl;
-		std::cout << "(Usage: [press 4]  Start ARAP Mode)" << std::endl;
-		std::cout << "(Usage: [press 5]  Save Current Mesh)" << std::endl;
-		std::cout << "Fixed Vertices Selection active, ARAP Paused" << std::endl;
+		//std::cout << "(Usage: [click]  Pick face on object)" << std::endl;
+		//std::cout << "(Usage: [press 1]  Select Fixed Vertices)" << std::endl;
+		//std::cout << "(Usage: [press 2]  Select Fixed Faces)" << std::endl;
+		//std::cout << "(Usage: [press 3]  Select Handles)" << std::endl;
+		//std::cout << "(Usage: [press 4]  Start ARAP Mode)" << std::endl;
+		//std::cout << "(Usage: [press 5]  Save Current Mesh)" << std::endl;
+		//std::cout << "Fixed Vertices Selection active, ARAP Paused" << std::endl;
 
 		igl::opengl::glfw::Viewer viewer;
-
+		
 		bool paint = true;
 		//Called when mouse is pressed
 		viewer.callback_mouse_down = [this, &paint](igl::opengl::glfw::Viewer& viewer, int button, int) -> bool
@@ -157,10 +157,12 @@ private:
 					return selectionHandler(viewer, current_mouse_button);
 				}
 				else {
-					if (handle_down) {
+					if (handle_down && !arap_running) {
+						//std::cout << "moving" << std::endl;
 						return displacementHandler(viewer);
 					}
 				}
+			
 			}
 			return false;
 		};
@@ -192,7 +194,7 @@ private:
 				}
 				repaintVertices(viewer);
 				std::string out = "fixed Faces Selection active, ARAP Paused";
-				std::cout << out << std::endl;
+			    std::cout << out << std::endl;
 				return true;
 			}
 			//Toggle handle selection
@@ -205,7 +207,7 @@ private:
 				}
 				repaintVertices(viewer);
 				handle_selection_mode = true;		
-				std::cout << "Handle Selection Active, ARAP Paused" << std::endl;
+				//std::cout << "Handle Selection Active, ARAP Paused" << std::endl;
 			}
 			//ARAP Mode
 			if (key == '4') {
@@ -230,13 +232,16 @@ private:
 				return true;
 			}
 			if (key == '5') {
+				/*
 				if (deformer_initiated) {
-					deformer.m_mesh.writeMesh("../data/bunny/outputMesh.off");
+					deformer.m_mesh.writeMesh("../data/outputMesh.off");
 				}
 				else {
-					source_mesh.writeMesh("../data/bunny/outputMesh.off");
+					source_mesh.writeMesh("../data/outputMesh.off");
 				}
 				std::cout <<  "Current mesh saved." << std::endl;
+				*/
+				viewer.save_mesh_to_file("../data/outputMesh.off");
 			}
 			return true;
 		};
@@ -251,29 +256,28 @@ private:
 	}
 
 	//Sends desired handle position to ARAP and updates vertices' positions
-	void performARAP(Eigen::Vector3f handlePos) {
+	void performARAP(Eigen::Vector3f handlePos, igl::opengl::glfw::Viewer& viewer) {
 		//only run algorithm if initialized and not already running
-		if (arap_initialized && !arap_running) {
 			arap_running = true;
 			deformer.applyDeformation(getFixedVerticesFromFaces(), current_moving_handle, handlePos.cast<double>(), num_iterations); // Hier passiert die flipflop optimization mit 3 iterationen
 			std::vector<Vertex> deformedVertices = deformer.m_mesh.getDeformedVertices();
 			source_mesh = deformer.m_mesh;
-			cout << "GUI[handleID] is " << deformedVertices[current_moving_handle].position.x() << "," << deformedVertices[current_moving_handle].position.y() << "," << deformedVertices[current_moving_handle].position.z() << endl;
+			//cout << "GUI[handleID] is " << deformedVertices[current_moving_handle].position.x() << "," << deformedVertices[current_moving_handle].position.y() << "," << deformedVertices[current_moving_handle].position.z() << endl;
 			//MatrixXd deformedVerticesMat(deformedVertices.size(), 3);
+
 			for (int i = 0; i < vertices.rows(); i++) {
-				vertices.row(i) = deformedVertices[i].position.cast<double>();
+				vertices.row(i) = deformedVertices[i].position;//.cast<double>();
 			}
+			
+			viewer.data().set_mesh(vertices, faces);
+
 			arap_running = false;
-			//vertices = deformedVerticesMat;
-			//std::cout << vertices.row(currentMovingHandle) << std::endl;
-		}
 	}
 
 	//check if fixed or handle vertices have been added or removed or the active handle is another one than before -> re-init structs
 	void requestArapInit() {
 		if (handles.size() != 0 && (fixedFaces != fixedFacesPreviousInit || fixedVertices != fixedVerticesPreviousInit || handles != handlesPreviousInit) || prev_moving_handle != current_moving_handle) {
 			arap_initialized = false;
-
 			source_mesh = SimpleMesh();
 			
 			if (!source_mesh.loadMeshFromGUI(vertices, faces, getFixedVerticesFromFaces())) {
@@ -288,6 +292,7 @@ private:
 			handlesPreviousInit = handles;
 			fixedVerticesPreviousInit = fixedVertices;
 			arap_initialized = true;
+			arap_running = false;
 		}
 	}
 
@@ -312,22 +317,23 @@ private:
 
 	// Calculates Handle Position in World Space according to mouse position
 	bool displacementHandler(igl::opengl::glfw::Viewer& viewer) {
-		double x = viewer.current_mouse_x;
-		double y = viewer.core().viewport(3) - viewer.current_mouse_y;
-		
-		Eigen::Vector3f handlePos = vertices.row(current_moving_handle).cast<float>();
-		//Convert depth to view
-		Eigen::Vector3d projection = igl::project(handlePos, viewer.core().view, viewer.core().proj, viewer.core().viewport).cast<double>();
+		if (arap_initialized && !arap_running) {
+			double x = viewer.current_mouse_x;
+			double y = viewer.core().viewport(3) - viewer.current_mouse_y;
 
-		//Convert mouse position into world position
-		Eigen::Vector3f worldPos = igl::unproject(Eigen::Vector3f(x, y, (float)projection.z()), viewer.core().view, viewer.core().proj, viewer.core().viewport);
+			Eigen::Vector3f handlePos = vertices.row(current_moving_handle).cast<float>();
+			//Convert depth to view
+			Eigen::Vector3d projection = igl::project(handlePos, viewer.core().view, viewer.core().proj, viewer.core().viewport).cast<double>();
 
-		//send intended handle position to ARAP
-		performARAP(worldPos);
+			//Convert mouse position into world position
+			Eigen::Vector3f worldPos = igl::unproject(Eigen::Vector3f(x, y, (float)projection.z()), viewer.core().view, viewer.core().proj, viewer.core().viewport);
 
-		//repaint
-		viewer.data().set_mesh(vertices, faces);
-		return true;
+			//send intended handle position to ARAP
+			performARAP(worldPos, viewer);
+
+			return true;
+		}
+		return false;
 	}
 
 	// Selects or Deselect faces/vertices on mouse click
@@ -418,7 +424,7 @@ private:
 				//select face
 				toSelect.insert(fid);
 				updateColor(fid, newColor, viewer);
-				//std::cout << fid << std::endl;
+				////std::cout << fid << std::endl;
 			}
 		}
 	}

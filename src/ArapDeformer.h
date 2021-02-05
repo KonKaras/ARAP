@@ -8,7 +8,7 @@
 #include "SimpleMesh.h"
 using namespace std;
 
-#define THRESHOLD 1.0e-3f
+#define THRESHOLD 1.0f
 
 struct Constraint {
 	int vertexID;

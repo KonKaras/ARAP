@@ -107,7 +107,7 @@ public:
 			}
 		}
 		else {
-			std::cout << "Incorrect mesh file type." << std::endl;
+			//std::cout << "Incorrect mesh file type." << std::endl;
 			return false;
 		}
 
@@ -169,7 +169,7 @@ public:
 		
 		std::ifstream file(filename);
 		if (!file.is_open()) {
-			std::cout << "Mesh file wasn't read successfully." << std::endl;
+			//std::cout << "Mesh file wasn't read successfully." << std::endl;
 			return false;
 		}
 
@@ -217,7 +217,7 @@ public:
 			}
 		}
 		else {
-			std::cout << "Incorrect mesh file type." << std::endl;
+			//std::cout << "Incorrect mesh file type." << std::endl;
 			return false;
 		}
 		
