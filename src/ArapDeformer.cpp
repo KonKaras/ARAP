@@ -336,7 +336,7 @@ void ArapDeformer::applyDeformation(vector<int> fixed_points, int handleID, Vect
         estimateVertices();
 
         double energy_i = calculateEnergy();        
-        if(iter == 0) std::cout<< "Iteration: "<< iter<< "  Local error: "<< energy_i << endl;
+        std::cout<< "Iteration: "<< iter<< "  Local error: "<< energy_i << endl;
 
         m_mesh.copyPPrime();
         energy = energy_i;

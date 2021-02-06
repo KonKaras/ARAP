@@ -232,16 +232,6 @@ private:
 				return true;
 			}
 			if (key == '5') {
-				/*
-				if (deformer_initiated) {
-					deformer.m_mesh.writeMesh("../data/outputMesh.off");
-				}
-				else {
-					source_mesh.writeMesh("../data/outputMesh.off");
-				}
-				std::cout <<  "Current mesh saved." << std::endl;
-				*/
-				//viewer.save_mesh_to_file("../data/outputMesh.off");
 				viewer.open_dialog_save_mesh();
 				return true;
 			}
@@ -260,17 +250,13 @@ private:
 
 	//Sends desired handle position to ARAP and updates vertices' positions
 	void performARAP(Eigen::Vector3f handlePos, igl::opengl::glfw::Viewer& viewer) {
-		//only run algorithm if initialized and not already running
-			cout << handlePos << endl;
 			arap_running = true;
-			deformer.applyDeformation(getFixedVerticesFromFaces(), current_moving_handle, handlePos.cast<double>(), num_iterations); // Hier passiert die flipflop optimization mit 3 iterationen
+			deformer.applyDeformation(getFixedVerticesFromFaces(), current_moving_handle, handlePos.cast<double>(), num_iterations); //flip flop optimization
 			std::vector<Vertex> deformedVertices = deformer.m_mesh.getDeformedVertices();
 			source_mesh = deformer.m_mesh;
-			//cout << "GUI[handleID] is " << deformedVertices[current_moving_handle].position.x() << "," << deformedVertices[current_moving_handle].position.y() << "," << deformedVertices[current_moving_handle].position.z() << endl;
-			//MatrixXd deformedVerticesMat(deformedVertices.size(), 3);
 
 			for (int i = 0; i < vertices.rows(); i++) {
-				vertices.row(i) = deformedVertices[i].position;//.cast<double>();
+				vertices.row(i) = deformedVertices[i].position;
 			}
 
 			//recompute normals for lighting
@@ -287,6 +273,7 @@ private:
 			arap_initialized = false;
 			source_mesh = SimpleMesh();
 			
+			//reload potentially changed mesh from last process
 			if (!source_mesh.loadMeshFromGUI(vertices, faces, getFixedVerticesFromFaces())) {
 				std::cout << "Mesh file wasn't read successfully at location: " << meshName << std::endl;
 				return;
@@ -325,6 +312,7 @@ private:
 
 	// Calculates Handle Position in World Space according to mouse position
 	bool displacementHandler(igl::opengl::glfw::Viewer& viewer) {
+		//only run algorithm if initialized and not already running
 		if (arap_initialized && !arap_running) {
 			double x = viewer.current_mouse_x;
 			double y = viewer.core().viewport(3) - viewer.current_mouse_y;
@@ -432,7 +420,6 @@ private:
 				//select face
 				toSelect.insert(fid);
 				updateColor(fid, newColor, viewer);
-				////std::cout << fid << std::endl;
 			}
 		}
 	}
