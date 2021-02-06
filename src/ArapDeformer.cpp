@@ -80,7 +80,7 @@ void ArapDeformer::setHandleConstraint(int handleID, Vector3d newHandlePosition)
 
 // Assume vertices are fixed, only rotations per vertex are estimated with Procrustes
 void ArapDeformer::estimateRotation(){
-    #pragma omp parallel for
+    //#pragma omp parallel for
     for(int vertexID=0; vertexID< m_num_v; vertexID++){
         Matrix3d rotation = Matrix3d::Identity();
         vector<int> neighbors = m_mesh.getNeighborsOf(vertexID);
@@ -277,7 +277,7 @@ void ArapDeformer::calculateSystemMatrix(){
 // At the beginning of a deformation the system_matrix is reset to the original system matrix of the original mesh
 void ArapDeformer::updateSystemMatrix(){
 	m_system_matrix = m_system_matrix_original;
-    #pragma omp parallel for
+    //#pragma omp parallel for
 	for (Constraint c : m_constraints) {
 		int i = c.vertexID;
 		m_system_matrix.row(i).setZero();
@@ -336,7 +336,7 @@ void ArapDeformer::applyDeformation(vector<int> fixed_points, int handleID, Vect
         estimateVertices();
 
         double energy_i = calculateEnergy();        
-        std::cout<< "Iteration: "<< iter<< "  Local error: "<< energy_i << endl;
+        if(iter==0)std::cout<< "Iteration: "<< iter<< "  Local error: "<< energy_i << endl;
 
         m_mesh.copyPPrime();
         energy = energy_i;

@@ -116,8 +116,8 @@ int main() {
 
 	int numIterations = 3;
 	int testcase = 0;
-	bool testing = true;
-	bool weight_test = true;
+	bool testing = false;
+	bool weight_test = false;
 
 	// Load the source and target mesh.
 	bool isInvalid = true;
