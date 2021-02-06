@@ -253,6 +253,7 @@ private:
 		viewer.data().point_size = 10;
 		viewer.data().set_colors(colors);
 		viewer.data().show_lines = false;
+		viewer.data().double_sided = true;
 		
 		viewer.launch();
 	}
@@ -270,6 +271,8 @@ private:
 			for (int i = 0; i < vertices.rows(); i++) {
 				vertices.row(i) = deformedVertices[i].position;//.cast<double>();
 			}
+
+			viewer.data().compute_normals();
 			
 			viewer.data().set_mesh(vertices, faces);
 
