@@ -261,6 +261,7 @@ private:
 	//Sends desired handle position to ARAP and updates vertices' positions
 	void performARAP(Eigen::Vector3f handlePos, igl::opengl::glfw::Viewer& viewer) {
 		//only run algorithm if initialized and not already running
+			cout << handlePos << endl;
 			arap_running = true;
 			deformer.applyDeformation(getFixedVerticesFromFaces(), current_moving_handle, handlePos.cast<double>(), num_iterations); // Hier passiert die flipflop optimization mit 3 iterationen
 			std::vector<Vertex> deformedVertices = deformer.m_mesh.getDeformedVertices();
@@ -272,8 +273,9 @@ private:
 				vertices.row(i) = deformedVertices[i].position;//.cast<double>();
 			}
 
+			//recompute normals for lighting
 			viewer.data().compute_normals();
-			
+			//redraw, there appears to be a bottleneck in this method
 			viewer.data().set_mesh(vertices, faces);
 
 			arap_running = false;
@@ -289,6 +291,7 @@ private:
 				std::cout << "Mesh file wasn't read successfully at location: " << meshName << std::endl;
 				return;
 			}
+
 			//reinit to update weights + system matrix for current deformed mesh after previous completed interaction 
 			deformer = ArapDeformer(&source_mesh, weight_type, estimation_type);
 			deformer_initiated = true;

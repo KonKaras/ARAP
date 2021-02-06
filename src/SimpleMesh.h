@@ -243,7 +243,7 @@ public:
 
 		}
 
-		cout << "Mesh has "<<num_v<<" vertices, "<<num_p<<" faces and "<<num_e<<" edges"<<endl;
+		//cout << "Mesh has "<<num_v<<" vertices, "<<num_p<<" faces and "<<num_e<<" edges"<<endl;
 		return true;
 	}
     /*

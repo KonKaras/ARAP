@@ -318,9 +318,9 @@ void ArapDeformer::applyDeformation(vector<int> fixed_points, int handleID, Vect
     m_handle_id = handleID;
     m_new_handle_position = handleNewPosition;
 
-    std::cout << "handleID: " << m_handle_id << endl;
-    std::cout << "Number of fixed vertices: " << m_constraints.size() << endl;
-    std::cout <<"Using sparse matrices: "<<use_sparse_matrices<<endl;
+    //std::cout << "handleID: " << m_handle_id << endl;
+    //std::cout << "Number of fixed vertices: " << m_constraints.size() << endl;
+    //std::cout <<"Using sparse matrices: "<<use_sparse_matrices<<endl;
 
     setHandleConstraint(handleID, handleNewPosition);
     double energy = 0;
@@ -336,7 +336,7 @@ void ArapDeformer::applyDeformation(vector<int> fixed_points, int handleID, Vect
         estimateVertices();
 
         double energy_i = calculateEnergy();        
-        //std::cout<< "Iteration: "<< iter<< "  Local error: "<< energy_i << endl;
+        if(iter == 0) std::cout<< "Iteration: "<< iter<< "  Local error: "<< energy_i << endl;
 
         m_mesh.copyPPrime();
         energy = energy_i;
@@ -346,5 +346,5 @@ void ArapDeformer::applyDeformation(vector<int> fixed_points, int handleID, Vect
         energy_prev = energy;
         iter++;
     }
-    std::cout << "Resulting energy: "<< energy<< endl; 
+    std::cout << "Resulting energy after " <<iter<< " iterations: "<< energy<< endl; 
 }
