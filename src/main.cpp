@@ -48,6 +48,13 @@ vector<int> squarePoints() {
 	return fixedPoints;
 }
 
+vector<int> testSmall() {
+	vector<int> fixedPoints;
+	fixedPoints.push_back(9);
+	fixedPoints.push_back(0);
+	fixedPoints.push_back(5);
+}
+
 void runTest(vector<int> fixedPoints, int handleID, Vector3d handleMoved, vector<Vector3d> target_positions, int numIterations, int weight_type, int estimation_type, string filenameMesh, string filename) {
 	SimpleMesh source_mesh;
 	if (!source_mesh.loadMesh(filenameMesh)) {
@@ -56,9 +63,6 @@ void runTest(vector<int> fixedPoints, int handleID, Vector3d handleMoved, vector
 	}
 
 	ArapDeformer deformer(&source_mesh, weight_type, estimation_type);
-
-	//we always wrote the handle first into the vector
-	//Vector3d handleMoved(93.464325, 124.944626, -40.314186); // source_mesh.GetVertexOriginal(handleID) + Vector3d(0,0,0.5);
 
 	auto t1 = std::chrono::high_resolution_clock::now();
 	deformer.applyDeformation(fixedPoints, handleID, handleMoved, numIterations);
@@ -74,7 +78,7 @@ void runTest(vector<int> fixedPoints, int handleID, Vector3d handleMoved, vector
 	case 1: weight = "constant"; break;
 	case 2: weight = "cotangent"; break;
 	default:
-		break;
+		weight = "cotangent"; break;
 	}
 
 	string estimation = "";
@@ -84,7 +88,7 @@ void runTest(vector<int> fixedPoints, int handleID, Vector3d handleMoved, vector
 	case 1: estimation = "LU"; break;
 	case 2: estimation = "DENSE"; break;
 	default:
-		break;
+		estimation = "LU"; break;
 	}
 
 	string jump_type = "none";
@@ -192,6 +196,7 @@ int main() {
 		else if (filename.compare("armadillo_1500") == 0) testcase = 3;
 		else if (filename.compare("armadillo_6k") == 0) testcase = 4;
 		else if (filename.compare("square_21") == 0) testcase = 5;
+		else if (filename.compare("test") == 0) testcase = 6;
 
 
 		//´set fixed points
@@ -203,11 +208,14 @@ int main() {
 		case 3: fixedPoints = pointsT1500(); break;
 		case 4: fixedPoints = pointsT3000(); break;
 		case 5: fixedPoints = squarePoints(); break;
+		case 6: fixedPoints = testSmall(); break;
 		default:
 			fixedPoints = pointsT300(); break;
 		}
 
+		//we always wrote the handle first into the vector
 		int handleID = fixedPoints[0];
+
 		vector<Vector3d> targetPositions = { Vector3d(-35.093834, 91.842247,-34.709782), Vector3d(93.464325, 124.944626, -40.314186) };
 		if (!weight_test) {
 			for (Vector3d handleMoved : targetPositions) {
@@ -221,7 +229,7 @@ int main() {
 			}
 		}
 		else {
-			targetPositions = {Vector3d(0.5, 0.5, 0.1), Vector3d(0.5, 0.5, 1) };
+			targetPositions = {Vector3d(0.5, 0, 0.1), Vector3d(0.5, 0, 1)};//{ Vector3d(2, 5, 0), Vector3d(2, 3, 1) }; //
 			for (Vector3d handleMoved : targetPositions) {
 				for (int i = 0; i < iter.size(); i++) {
 					for (int w = 0; w < 3; w++) {

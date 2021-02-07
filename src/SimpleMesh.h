@@ -393,9 +393,12 @@ public:
 			// cot_theta_sum += (1 / tan(theta));
 			cot_theta_sum += theta;
 		}
+		/*
 		if (cot_theta_sum < 0) {
 			cot_theta_sum = 0;
 		}
+		*/
+		
 		return abs(cot_theta_sum) * 0.5f;
 	}
 

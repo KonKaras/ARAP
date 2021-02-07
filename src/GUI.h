@@ -141,7 +141,7 @@ private:
 				mouse_down = false;
 				vertex_hit = false;
 				prev_moving_handle = current_moving_handle;
-				current_moving_handle = -1;
+				//current_moving_handle = -1;
 				handle_down = false;
 			}
 			return false;
@@ -269,7 +269,7 @@ private:
 
 	//check if fixed or handle vertices have been added or removed or the active handle is another one than before -> re-init structs
 	void requestArapInit() {
-		if (handles.size() != 0 && (fixedFaces != fixedFacesPreviousInit || fixedVertices != fixedVerticesPreviousInit || handles != handlesPreviousInit) || prev_moving_handle != current_moving_handle) {
+		if (handles.size() != 0 && (fixedFaces != fixedFacesPreviousInit || fixedVertices != fixedVerticesPreviousInit || handles != handlesPreviousInit || prev_moving_handle != current_moving_handle)) {
 			arap_initialized = false;
 			source_mesh = SimpleMesh();
 			
