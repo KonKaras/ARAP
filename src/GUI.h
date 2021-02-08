@@ -66,7 +66,7 @@ private:
 
 		//initialize our mesh structures based on loaded mesh
 		if (!source_mesh.loadMesh(filenameMesh)) {
-			//std::cout << "Mesh file wasn't read successfully at location: " << filenameMesh << std::endl;
+			std::cout << "Mesh file wasn't read successfully at location: " << filenameMesh << std::endl;
 			return;
 		}
 
@@ -75,14 +75,6 @@ private:
 
 		bool arapModeRef = arap_mode;
 		bool handleSelectionModeRef = handle_selection_mode;
-
-		//std::cout << "(Usage: [click]  Pick face on object)" << std::endl;
-		//std::cout << "(Usage: [press 1]  Select Fixed Vertices)" << std::endl;
-		//std::cout << "(Usage: [press 2]  Select Fixed Faces)" << std::endl;
-		//std::cout << "(Usage: [press 3]  Select Handles)" << std::endl;
-		//std::cout << "(Usage: [press 4]  Start ARAP Mode)" << std::endl;
-		//std::cout << "(Usage: [press 5]  Save Current Mesh)" << std::endl;
-		//std::cout << "Fixed Vertices Selection active, ARAP Paused" << std::endl;
 
 		igl::opengl::glfw::Viewer viewer;
 		
@@ -121,7 +113,7 @@ private:
 							viewer.data().add_points(vertices.row(*itr), Eigen::RowVector3d(0, 0, 1));
 						}
 						requestArapInit();
-						return true;// DisplacementHandler(viewer);
+						return true;
 					}
 				}
 			}
@@ -141,7 +133,6 @@ private:
 				mouse_down = false;
 				vertex_hit = false;
 				prev_moving_handle = current_moving_handle;
-				//current_moving_handle = -1;
 				handle_down = false;
 			}
 			return false;
@@ -158,7 +149,6 @@ private:
 				}
 				else {
 					if (handle_down && !arap_running) {
-						//std::cout << "moving" << std::endl;
 						return displacementHandler(viewer);
 					}
 				}
@@ -180,7 +170,7 @@ private:
 					updateColor(fid, Eigen::Vector3d(1, 0, 0), viewer);
 				}
 				repaintVertices(viewer);
-				std::string out = "fixed Vertices Selection active, ARAP Paused";
+				std::string out = "Fixed Vertices Selection active, ARAP Paused";
 				std::cout << out << std::endl;
 				return true;
 			}
@@ -193,7 +183,7 @@ private:
 					updateColor(fid, Eigen::Vector3d(1, 0, 0), viewer);
 				}
 				repaintVertices(viewer);
-				std::string out = "fixed Faces Selection active, ARAP Paused";
+				std::string out = "Fixed Faces Selection active, ARAP Paused";
 			    std::cout << out << std::endl;
 				return true;
 			}
@@ -207,7 +197,7 @@ private:
 				}
 				repaintVertices(viewer);
 				handle_selection_mode = true;		
-				//std::cout << "Handle Selection Active, ARAP Paused" << std::endl;
+				std::cout << "Handle Selection Active, ARAP Paused" << std::endl;
 			}
 			//ARAP Mode
 			if (key == '4') {
@@ -291,6 +281,7 @@ private:
 		}
 	}
 
+	//Retrieves all ids of fixed points from the chosen faces, includes the handle without duplicates
 	std::vector<int> getFixedVerticesFromFaces() {
 		std::set<int> fixedVerticesLocal;
 		fixedVerticesLocal.clear();
@@ -407,9 +398,9 @@ private:
 
 		if (!faceSelection) {
 			if (handles.find(fid) == handles.end() && fixedVertices.find(fid) == fixedVertices.end()) {
-				int selectedVertex = fid;//GetClosestVertexIdFromBC(fid, bc);
+				int selectedVertex = fid;
 				toSelect.insert(selectedVertex);
-				viewer.data().add_points(vertices.row(selectedVertex), newColor.transpose()); //Unsure about color vector
+				viewer.data().add_points(vertices.row(selectedVertex), newColor.transpose());
 				//checks that vertex is hit
 				vertex_hit = true;
 			}
@@ -447,6 +438,7 @@ private:
 		}
 	
 		Eigen::Vector3d sqdistances;
+		//retrieve raycast result coordinates from barycentric ones
 		Eigen::Vector3d queryPoint = bc(0) * closestPoints.row(0) + bc(1) * closestPoints.row(1)+ bc(2) * closestPoints.row(2);
 		
 		for (int i = 0; i < 3; i++) {
