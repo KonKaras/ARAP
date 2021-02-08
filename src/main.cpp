@@ -53,6 +53,7 @@ vector<int> testSmall() {
 	fixedPoints.push_back(9);
 	fixedPoints.push_back(0);
 	fixedPoints.push_back(5);
+	return fixedPoints;
 }
 
 void runTest(vector<int> fixedPoints, int handleID, Vector3d handleMoved, vector<Vector3d> target_positions, int numIterations, int weight_type, int estimation_type, string filenameMesh, string filename) {
